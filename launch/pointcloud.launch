@@ -1,0 +1,40 @@
+<launch>
+  <arg name="rviz" default="true" />
+  <arg name="camera" default="camera" />
+  <arg name="num_worker_threads" default="4" />
+  
+  <node name="map_to_camera" pkg="tf" type="static_transform_publisher"
+	args="0 0 1.0 1.57 0 -1.57 map camera 100"/>
+
+  <!-- TOF camera launch -->
+  <include file="$(find cis_camera)/launch/tof.launch"/>
+
+  <!-- rviz -->
+  <node if="$(arg rviz)"
+        name="rviz" pkg="rviz" type="rviz"
+	args="-d $(find cis_camera)/launch/pointcloud.rviz"/>
+  
+  <group ns="$(arg camera)">
+    <arg name="manager" value="$(arg camera)_nodelet_manager"/>
+    <arg name="debug" default="false" /> <!-- Run manager in GDB? -->
+    
+    <include file="$(find rgbd_launch)/launch/includes/manager.launch.xml">
+      <arg name="name"                value="$(arg manager)" />
+      <arg name="debug"               value="$(arg debug)" />
+      <arg name="num_worker_threads"  value="$(arg num_worker_threads)" />
+    </include>
+    
+    <include file="$(find rgbd_launch)/launch/includes/processing.launch.xml">
+      <arg name="manager" value="$(arg manager)" />
+      <arg name="respawn" value="false" />
+      <arg name="rgb_processing" value="false" />
+      <arg name="ir_processing" value="false" />
+      <arg name="depth_processing" value="true" />
+      <arg name="depth_registered_processing" value="false" />
+      <arg name="disparity_processing" value="false" />
+      <arg name="disparity_registered_processing" value="false" />
+      <arg name="hw_registered_processing" value="false" />
+      <arg name="sw_registered_processing" value="false" />
+    </include>
+  </group>
+</launch>
