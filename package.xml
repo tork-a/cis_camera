@@ -52,6 +52,8 @@
   <build_depend>roscpp</build_depend>
   <build_export_depend>roscpp</build_export_depend>
   <exec_depend>roscpp</exec_depend>
+  <exec_depend>rgbd_launch</exec_depend>
+  <exec_depend>jsk_visualization</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
