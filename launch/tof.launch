@@ -1,6 +1,6 @@
 <launch>
   <group ns="camera">
-    <node pkg="libuvc_camera" type="camera_node" name="mycam">
+    <node pkg="cis_camera" type="camera_node" name="mycam">
       <remap from="image_raw" to="depth/image_raw"/>
       
       <!-- Parameters used to find the camera -->
