@@ -1,4 +1,14 @@
 <launch>
+  
+  <arg name="depth_ir"      default="0" />
+  <arg name="depth_range"   default="0" />
+  <arg name="threshold"     default="0" />
+  <arg name="nr_filter"     default="0" />
+  <arg name="pulse_count"   default="2000" />
+  <arg name="ld_enable"     default="15" />
+  <arg name="ir_gain"       default="1024" />
+  <arg name="error_stop"    default="0" />
+  
   <group ns="camera">
     <node pkg="cis_camera" type="camera_node" name="mycam">
       <remap from="image_raw" to="depth/image_raw"/>
@@ -9,10 +19,20 @@
       <param name="serial" value=""/>
       <!-- If the above parameters aren't unique, choose the first match: -->
       <param name="index" value="0"/>
-
+      
+      <param name="depth_ir"    value="$(arg depth_ir)" />
+      <param name="depth_range" value="$(arg depth_range)" />
+      <param name="threshold"   value="$(arg threshold)" />
+      <param name="nr_filter"   value="$(arg nr_filter)" />
+      <param name="pulse_count" value="$(arg pulse_count)" />
+      <param name="ld_enable"   value="$(arg ld_enable)" />
+      <param name="ir_gain"     value="$(arg ir_gain)" />
+      <param name="error_stop"  value="$(arg error_stop)" />
+      
       <!-- Image size and type -->
       <param name="width" value="640"/>
       <param name="height" value="480"/>
+<!--      <param name="height" value="960"/> -->
       <!-- choose whichever uncompressed format the camera supports: -->
       <param name="video_mode" value="gray16"/> <!-- or yuyv/nv12/mjpeg -->
       <param name="frame_rate" value="30"/>
@@ -24,4 +44,5 @@
       <param name="auto_white_balance" value="false"/>
     </node>
   </group>
+  
 </launch>

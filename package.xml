@@ -63,9 +63,6 @@
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rgbd_launch</exec_depend>
-  <exec_depend>jsk_visualization</exec_depend>
-
-  <exec_depend>roscpp</exec_depend>
   <exec_depend>camera_info_manager</exec_depend>
   <exec_depend>dynamic_reconfigure</exec_depend>
   <exec_depend>image_transport</exec_depend>
@@ -73,6 +70,7 @@
   <exec_depend>nodelet</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>libuvc_camera</exec_depend>
+  <exec_depend>jsk_rviz_plugins</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

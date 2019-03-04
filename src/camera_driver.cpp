@@ -462,90 +462,575 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
 
   rgb_frame_ = uvc_allocate_frame(new_config.width * new_config.height * 3);
   assert(rgb_frame_);
-
-  // Set range mode
-  if (true)
-  {
-    uint16_t send[5] = {0x0002, 0, 0, 0, 0};
-    uint16_t recv[5] = {0x8002, 0, 0, 0, 0};
-    int err;
-
-    err = uvc_set_ctrl(devh_, 3, 0x03, send, sizeof(send));
-    if (err != sizeof(send))
-    {
-      uvc_perror(uvc_error_t(err), "Set range failed.");
-    }
-    // Read
-    err = uvc_set_ctrl(devh_, 3, 0x03, recv, sizeof(recv));
-    if (err != sizeof(recv))
-    {
-      uvc_perror(uvc_error_t(err), "Set range2 failed.");
-    }
-    err = uvc_get_ctrl(devh_, 3, 0x03, recv, sizeof(recv), UVC_GET_CUR);
-    if (err != sizeof(recv))
-    {
-      uvc_perror(uvc_error_t(err), "Get range failed.");
-    }
-    else
-    {
-      uint16_t mode = recv[1];
-      ROS_INFO("range mode: %x", mode);
-    }
-  }
-  // Set NR filter
-  if (true)
-  {
-    uint16_t send[5] = {0x0004, 0, 0, 0, 0};
-    uint16_t recv[5] = {0x8004, 0, 0, 0, 0};
-    int err;
-
-    err = uvc_set_ctrl(devh_, 3, 0x03, send, sizeof(send));
-    if (err != sizeof(send))
-    {
-      uvc_perror(uvc_error_t(err), "Set NR filter failed.");
-    }
-    // Read
-    err = uvc_set_ctrl(devh_, 3, 0x03, recv, sizeof(recv));
-    if (err != sizeof(recv))
-    {
-      uvc_perror(uvc_error_t(err), "Set NR filter2 failed.");
-    }
-    err = uvc_get_ctrl(devh_, 3, 0x03, recv, sizeof(recv), UVC_GET_CUR);
-    if (err != sizeof(recv))
-    {
-      uvc_perror(uvc_error_t(err), "Get NR Filter failed.");
-    }
-    else
-    {
-      uint16_t data = recv[1];
-      ROS_INFO("NR Filter: %x", data);
-    }
-  }
-  if (true)
-  {
-    // Get range gain
-    uint16_t send[5] = {0x8007, 0, 0, 0, 0};
-    uint16_t recv[5] = {0x8007, 0, 0, 0, 0};
-    int err;
-
-    err = uvc_set_ctrl(devh_, 3, 0x03, send, sizeof(send));
-    if (err != sizeof(send))
-    {
-      uvc_perror(uvc_error_t(err), "Check send failed.");
-    }
-    err = uvc_get_ctrl(devh_, 3, 0x03, recv, sizeof(recv), UVC_GET_CUR);
-    if (err != sizeof(recv))
-    {
-      uvc_perror(uvc_error_t(err), "Check recv failed.");
-    }
-    else
-    {
-      double depth_rate = *(double*)(&recv[1]);
-      ROS_INFO("depth_rate: %f", depth_rate);
-    }
-  }
+  
+  
+  // TOF Settigns
+  int tof_err;
+  
+  uint16_t eeprom_mode = 0x0000;
+  tof_err = TOF_SetEEPROMMode( eeprom_mode );
+  tof_err = TOF_SetErrorClear();
+  
+  // Get TOF Camera Version
+  uint16_t version_n;
+  uint16_t build_n;
+  uint16_t build_y;
+  uint16_t build_d;
+  tof_err = TOF_GetVersion( version_n, build_n, build_y, build_d );
+  
+  // Set ROS Parameters
+  TOF_SetMode_ROSParameter_All();
+  
+  // Get TOF Camera Informations
+  uint16_t depth_ir;
+  tof_err = TOF_GetDepthIR( depth_ir );
+  
+  uint16_t depth_range;
+  uint16_t dr_index;
+  tof_err = TOF_GetDepthRange( depth_range, dr_index );
+  
+  uint16_t threshold;
+  tof_err = TOF_GetThreshold( threshold );
+  
+  uint16_t nr_filter;
+  tof_err = TOF_GetNRFilter( nr_filter );
+  
+  uint16_t pulse_count;
+  tof_err = TOF_GetPulseCount( pulse_count );
+  
+  uint16_t ld_enable;
+  tof_err = TOF_GetLDEnable( ld_enable );
+  
+  double depth_cnv_gain;
+  tof_err = TOF_GetDepthCnvGain( depth_cnv_gain );
+  
+  short          offset_val;
+  unsigned short max_data;
+  unsigned short min_dist;
+  unsigned short max_dist;
+  tof_err = TOF_GetDepthInfo( offset_val, max_data, min_dist, max_dist );
+  
+  uint16_t ir_gain;
+  tof_err = TOF_GetIRGain( ir_gain );
+  
+  double t1;
+  double t2;
+  tof_err = TOF_GetTemparature( t1, t2 );
+  
+  uint16_t error_stop;
+  tof_err = TOF_GetErrorStop( error_stop );
+  
+  uint16_t common_err;
+  uint16_t eeprom_err_factory; 
+  uint16_t eeprom_err;
+  uint16_t mipi_temp_err;
+  tof_err = TOF_GetErrorInfo( common_err, eeprom_err_factory, eeprom_err, mipi_temp_err );
+  
+  
   state_ = kRunning;
 }
+
+
+// TOF Camera Video Control Interface Functions
+
+int CameraDriver::TOF_SetCtrl( uint16_t *data ,int size ) {
+    
+    int err;
+        
+    err = uvc_set_ctrl( devh_, 3, 0x03, data, size );
+    if ( err != size ) {
+        ROS_ERROR( "Set Ctrl failed. Error: %d", err );
+    }
+    /* else {
+        ROS_INFO( "Set Ctrl { 0x%04x, %d, %d, %d, %d } / Return: %d / Size: %d",
+                    data[0], data[1], data[2], data[3], data[4], err, size );
+    } */
+    return err;
+}
+
+
+int CameraDriver::TOF_GetCtrl( uint16_t *data, int size ) {
+    
+    int err;
+        
+    err = TOF_SetCtrl( data, size );
+    if ( err != size ) {
+        ROS_ERROR( "Set Ctrl to Get failed : Error: %d", err );
+        return err;
+    }
+    else {
+        err = uvc_get_ctrl( devh_, 3, 0x03, data, size, UVC_GET_CUR );
+        if ( err != size ) {
+            ROS_ERROR( "Get Ctrl failed. Error: %d", err );
+        }
+        /* else {
+            ROS_INFO( "Get Ctrl { 0x%04x, %x, %x, %x, %x } / Return: %d / Size: %d", 
+                        data[0], data[1], data[2], data[3], data[4], err, size );
+        } */
+    }
+    return err;
+}
+
+
+void CameraDriver::TOF_SetMode_ROSParameter_All() {
+    
+    int err;
+    
+    err = TOF_SetMode_ROSParameter( "depth_ir" );
+    err = TOF_SetMode_ROSParameter( "depth_range" );
+    err = TOF_SetMode_ROSParameter( "threshold" );
+    err = TOF_SetMode_ROSParameter( "nr_filter" );
+    err = TOF_SetMode_ROSParameter( "pulse_count" );
+    err = TOF_SetMode_ROSParameter( "ld_enable" );
+    err = TOF_SetMode_ROSParameter( "ir_gain" );
+    err = TOF_SetMode_ROSParameter( "error_stop" );
+    
+    return;
+}
+
+int CameraDriver::TOF_SetMode_ROSParameter( std::string param_name ) {
+    
+    uint16_t send[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
+    uint16_t recv[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
+    
+    int param_set[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
+    int param_min[5] = { 0x0000, 0, 0, 0, 0 };
+    int param_max[5] = { 0xFFFF, 1, 1, 1, 1 };
+    
+    int param        = 0;
+    int err          = 0;
+    
+    // Get ROS Parameter and Set Data
+    err = priv_nh_.getParam( param_name, param );
+    if ( err ) {
+        
+        if ( param_name == "depth_ir" ) {
+            
+            param_set[0] = TOF_SET_DEPTH_IR;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 1;
+            
+            recv[0] = TOF_GET_DEPTH_IR;
+        }
+        else if ( param_name == "depth_range" ) {
+            
+            param_set[0] = TOF_SET_DEPTH_RANGE;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 1;
+            
+            recv[0] = TOF_GET_DEPTH_RANGE;
+        }
+        else if ( param_name == "threshold" ) {
+            
+            param_set[0] = TOF_SET_THRESHOLD;
+            param_set[1] = param;
+            
+            param_min[1] = 0x0000;
+            param_max[1] = 0x3FFF;
+            
+            recv[0] = TOF_GET_THRESHOLD;
+        }
+        else if ( param_name == "nr_filter" ) {
+            
+            param_set[0] = TOF_SET_NR_FILTER;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 1;
+            
+            recv[0] = TOF_GET_NR_FILTER;
+        }
+        else if ( param_name == "pulse_count" ) {
+            
+            param_set[0] = TOF_SET_PULSE_COUNT;
+            param_set[1] = param;
+            
+            param_min[1] = 1;
+            param_max[1] = 2000;
+            
+            recv[0] = TOF_GET_PULSE_COUNT;
+        }
+        else if ( param_name == "ld_enable" ) {
+            
+            param_set[0] = TOF_SET_LD_ENABLE;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 15;
+            
+            recv[0] = TOF_GET_LD_ENABLE;
+        }
+        else if ( param_name == "ir_gain" ) {
+            
+            param_set[0] = TOF_SET_IR_GAIN;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 0x07FF;
+            
+            recv[0] = TOF_GET_IR_GAIN;
+        }
+        else if ( param_name == "error_stop" ) {
+            
+            param_set[0] = TOF_SET_ERROR_STOP;
+            param_set[1] = param;
+            
+            param_min[1] = 0;
+            param_max[1] = 1;
+            
+            recv[0] = TOF_GET_ERROR_STOP;
+        }
+        else {
+            ROS_WARN( "Unmatch Parameter Name : %s", param_name.c_str() );
+            err = 0;
+            return err;
+        }
+        
+        // Value Check
+        for ( int i = 0; i < 5; i++ ) {
+            if ( param_set[i] < param_min[i] )      send[i] = param_min[i];
+            else if ( param_max[i] < param_set[i] ) send[i] = param_max[i];
+            else                                    send[i] = param_set[i];
+        }
+    }
+    else {
+        ROS_ERROR( "Parameter Acquisition Error : %s", param_name.c_str() );
+        return err;
+    }
+    
+    // Set Parameter on TOF Camera
+    err = TOF_SetCtrl( send, sizeof(send) );
+    if ( err == sizeof(send) ) {
+        ROS_INFO( "Set Parameter %s as { %d, %d, %d, %d } on TOF Camera", 
+                                param_name.c_str(), send[1], send[2], send[3], send[4] );
+    }
+    else {
+        ROS_ERROR( "Set Parameter %s failed. Error: %d", param_name.c_str(), err );
+        return err;
+    }
+    
+    // Get Parameter on TOF Camera for Check
+    err = TOF_GetCtrl( recv, sizeof(recv) );
+    if ( err == sizeof(recv) ) {
+        ROS_INFO( "Get Parameter %s as { %d, %d, %d, %d } on TOF Camera", 
+                                param_name.c_str(), recv[1], recv[2], recv[3], recv[4] );
+    }
+    else {
+        ROS_ERROR( "Get Parameter of %s for Check Failed. Error : %d", param_name.c_str(), err );
+        return err;
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_SetEEPROMMode( uint16_t mode = 0x0000 ) {
+    
+    uint16_t send[5] = { TOF_SET_EEPROM, 0, 0, 0, 0 };
+    int err;
+    
+    uint16_t val_min = 0x0000;
+    uint16_t val_max = 0x0001;
+    
+    // Value Check
+    if ( mode < val_min )      send[1] = val_min;
+    else if ( val_max < mode ) send[1] = val_max;
+    else                       send[1] = mode;
+    
+    err = TOF_SetCtrl( send, sizeof(send) );
+    if ( err == sizeof(send) ) {
+        ROS_INFO( "Set EEPROM Mode : %d", send[1] );
+    }
+    else {
+        ROS_ERROR( "Set EEPROM Mode failed. Error: %d", err );
+        return err;
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_SetErrorClear() {
+    
+    uint16_t send[5] = { TOF_SET_ERROR_CLEAR, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_SetCtrl( send, sizeof(send) );
+    if ( err == sizeof(send) ) {
+        ROS_INFO( "Set Error Clear" );
+    }
+    else {
+        ROS_ERROR( "Set Error Clear failed. Error: %d", err );
+        return err;
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetDepthIR( uint16_t& depth_ir ) {
+    
+    uint16_t data[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        depth_ir = data[1];
+        ROS_INFO( "Get Depth/IR Mode : %d", depth_ir );
+    }
+    else {
+        ROS_ERROR( "Get Depth IR Mode failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetDepthRange( uint16_t& depth_range, uint16_t& dr_index ) {
+    
+    uint16_t data[5] = { TOF_GET_DEPTH_RANGE, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        depth_range = data[1];
+        dr_index    = data[2];
+        ROS_INFO( "Get Depth Range Mode : %d / Index : %d", depth_range, dr_index );
+    }
+    else {
+        ROS_ERROR( "Get Depth  Range Mode failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetThreshold( uint16_t& threshold ) {
+    
+    uint16_t data[5] = { TOF_GET_THRESHOLD, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        threshold = data[1];
+        ROS_INFO( "Get Threshold : %d", threshold );
+    }
+    else {
+        ROS_ERROR( "Get Threshold failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetNRFilter( uint16_t& nr_filter ) {
+    
+    uint16_t data[5] = { TOF_GET_NR_FILTER, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        nr_filter = data[1];
+        ROS_INFO( "Get NR Filter : %d", nr_filter );
+    }
+    else {
+        ROS_ERROR( "Get NR Filter failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetPulseCount( uint16_t& pulse_count ) {
+    
+    uint16_t data[5] = { TOF_GET_PULSE_COUNT, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        pulse_count = data[1];
+        ROS_INFO( "Get Pulse Count : %d", pulse_count );
+    }
+    else {
+        ROS_ERROR( "Get Pulse Count failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetLDEnable( uint16_t& ld_enable ) {
+    
+    uint16_t data[5] = { TOF_GET_LD_ENABLE, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        ld_enable = data[1];
+        ROS_INFO( "Get LD Enable : %d", ld_enable );
+    }
+    else {
+        ROS_ERROR( "Get LD Enable failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetDepthCnvGain( double& depth_cnv_gain ) {
+    
+    uint16_t data[5] = { TOF_GET_DEPTH_CNV_GAIN, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        depth_cnv_gain = *(double*)(&data[1]);
+        ROS_INFO( "Get Depth Cnv Gain : %f", depth_cnv_gain );
+    }
+    else {
+        ROS_ERROR( "Get Depth Cnv Gain failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetDepthInfo( short&          offset_val, 
+                                    unsigned short& max_data, 
+                                    unsigned short& min_dist, 
+                                    unsigned short& max_dist  ) {
+    
+    uint16_t data[5] = { TOF_GET_DEPTH_INFO, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        offset_val = *(short*)(&data[1]);
+        max_data   = *(unsigned short*)(&data[2]);
+        min_dist   = *(unsigned short*)(&data[3]);
+        max_dist   = *(unsigned short*)(&data[4]);
+        ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]", 
+                    offset_val, max_data, min_dist, max_dist );
+    }
+    else {
+        ROS_ERROR( "Get Depth Info failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetIRGain( uint16_t& ir_gain ) {
+    
+    uint16_t data[5] = { TOF_GET_IR_GAIN, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        ir_gain = data[1];
+        ROS_INFO( "Get IR Gain : %d", ir_gain );
+    }
+    else {
+        ROS_ERROR( "Get IR Gain failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetTemparature( double& t1, double& t2 ) {
+    
+    uint16_t data[5] = { TOF_GET_TEMPARATURE, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        t1 = data[1] / 256.0;
+        t2 = data[2] / 256.0;
+        ROS_INFO( "Get Temparature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
+    }
+    else {
+        ROS_ERROR( "Get Temparature failed. Error: %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetErrorStop( uint16_t& error_stop ) {
+    
+    uint16_t data[5] = { TOF_GET_ERROR_STOP, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        error_stop = data[1];
+        ROS_INFO( "Get Error Stop : %d", error_stop );
+    }
+    else {
+        ROS_ERROR( "Get Error Stop failed. Error : %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetVersion(   uint16_t& version_n, 
+                                    uint16_t& build_n, 
+                                    uint16_t& build_y, 
+                                    uint16_t& build_d   ) {
+    
+    uint16_t data[5] = { TOF_GET_VERSION, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        version_n = data[1];
+        build_n   = data[2];
+        build_y   = data[3];
+        build_d   = data[4];
+        ROS_INFO( "Get Version : %x / Build Number : %x / Build Date : %x%x(YYYYMMDD)", 
+                    version_n, build_n, build_y, build_d );
+    }
+    else {
+        ROS_ERROR( "Get Version failed. Error: %d", err );
+    }
+    
+    return err;
+}
+
+
+int CameraDriver::TOF_GetErrorInfo( uint16_t& common_err, 
+                                    uint16_t& eeprom_err_factory, 
+                                    uint16_t& eeprom_err, 
+                                    uint16_t& mipi_temp_err     ) {
+    
+    uint16_t data[5] = { TOF_GET_ERROR_INFO, 0, 0, 0, 0 };
+    int err;
+    
+    err = TOF_GetCtrl( data, sizeof(data) );
+    if ( err == sizeof(data) ) {
+        common_err          = data[1];
+        eeprom_err_factory  = data[2];
+        eeprom_err          = data[3];
+        mipi_temp_err       = data[4];
+        ROS_INFO( "Get Error Info - Common : 0x%02x / EEPROM Factory : 0x%02x / EEPROM : 0x%02x / MIPI/Temparature : 0x%02x", 
+                    common_err, eeprom_err_factory, eeprom_err, mipi_temp_err );
+    }
+    else {
+        ROS_ERROR( "Get Error Info failed. Error: %d", err );
+    }
+    
+    return err;
+}
+
+// End of TOF Camera Video Control Interface Functions
+
+
 
 void CameraDriver::CloseCamera() {
   assert(state_ == kRunning);
