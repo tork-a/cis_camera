@@ -9,9 +9,9 @@
 #include <camera_info_manager/camera_info_manager.h>
 #include <boost/thread/mutex.hpp>
 
-#include <libuvc_camera/UVCCameraConfig.h>
+#include <cis_camera/UVCCameraConfig.h>
 
-namespace libuvc_camera {
+namespace cis_camera {
 
 class CameraDriver {
 public:
@@ -21,7 +21,8 @@ public:
   bool Start();
   void Stop();
   
-  void TOF_SetMode_ROSParameter_All();
+  void TOF_SetMode_All();
+  void TOF_GetInfo_All();
 
 
 private:
@@ -81,10 +82,15 @@ private:
         TOF_GET_DEPTH_CNV_GAIN  = 0x8007,
         TOF_GET_DEPTH_INFO      = 0x8008,
         TOF_GET_IR_GAIN         = 0x8009,
-        TOF_GET_TEMPARATURE     = 0x800A,
+        TOF_GET_TEMPERATURE     = 0x800A,
         TOF_GET_ERROR_STOP      = 0x8010,
         TOF_GET_VERSION         = 0xFF00,
         TOF_GET_ERROR_INFO      = 0xFF01,
+    };
+    
+    enum tof_eeprom_mode {
+        TOF_EEPROM_FACTORY_DEFAULT  = 0x0000,
+        TOF_EEPROM_UPDATE_CURRENT   = 0x0001,
     };
     
     int TOF_SetCtrl( uint16_t *data ,int len );
@@ -92,7 +98,7 @@ private:
     
     int TOF_SetMode_ROSParameter( std::string param_name );
     int TOF_SetEEPROMMode( uint16_t mode );
-    int TOF_SetErrorClear();
+    int TOF_ClearError();
     
     int TOF_GetDepthIR( uint16_t& depth_ir );
     int TOF_GetDepthRange( uint16_t& depth_range, uint16_t& dr_index );
@@ -106,7 +112,7 @@ private:
                           unsigned short& min_dist, 
                           unsigned short& max_dist  );
     int TOF_GetIRGain( uint16_t& ir_gain );
-    int TOF_GetTemparature( double& t1, double& t2 );
+    int TOF_GetTemperature( double& t1, double& t2 );
     int TOF_GetErrorStop( uint16_t& error_stop );
     int TOF_GetVersion( uint16_t& version_n, 
                         uint16_t& build_n, 
@@ -116,7 +122,11 @@ private:
                           uint16_t& eeprom_err_factory, 
                           uint16_t& eeprom_err, 
                           uint16_t& mipi_temp_err );
-  
+    
+    void TOF_PublishTemperature( std::string frame_id );
+    
+    ros::Publisher tof_t1_pub_;
+    ros::Publisher tof_t2_pub_;
   
   // END TOF Camera
 

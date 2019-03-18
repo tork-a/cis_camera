@@ -37,7 +37,7 @@
 
 #include "cis_camera/camera_driver.h"
 
-namespace libuvc_camera {
+namespace cis_camera {
 
 class CameraNodelet : public nodelet::Nodelet {
 public:
@@ -75,4 +75,4 @@ void CameraNodelet::onInit() {
 // Register this plugin with pluginlib.
 //
 // parameters are: class type, base class type
-PLUGINLIB_EXPORT_CLASS(libuvc_camera::CameraNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(cis_camera::CameraNodelet, nodelet::Nodelet)

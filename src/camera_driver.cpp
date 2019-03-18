@@ -36,15 +36,16 @@
 #include <unistd.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/Temperature.h>
 #include <std_msgs/Header.h>
 #include <image_transport/camera_publisher.h>
 #include <dynamic_reconfigure/server.h>
 #include <libuvc/libuvc.h>
-#define libuvc_VERSION (libuvc_VERSION_MAJOR * 10000 \
-                      + libuvc_VERSION_MINOR * 100 \
-                      + libuvc_VERSION_PATCH)
+//#define libuvc_VERSION (libuvc_VERSION_MAJOR * 10000 \
+//                      + libuvc_VERSION_MINOR * 100 \
+//                      + libuvc_VERSION_PATCH)
 
-namespace libuvc_camera {
+namespace cis_camera {
 
 CameraDriver::CameraDriver(ros::NodeHandle nh, ros::NodeHandle priv_nh)
   : nh_(nh), priv_nh_(priv_nh),
@@ -73,14 +74,14 @@ bool CameraDriver::Start() {
   err = uvc_init(&ctx_, NULL);
 
   if (err != UVC_SUCCESS) {
-    uvc_perror(err, "ERROR: uvc_init");
+    ROS_ERROR( "ERROR: uvc_init" );
     return false;
   }
 
   state_ = kStopped;
 
   config_server_.setCallback(boost::bind(&CameraDriver::ReconfigureCallback, this, _1, _2));
-
+  
   return state_ == kRunning;
 }
 
@@ -115,35 +116,35 @@ void CameraDriver::ReconfigureCallback(UVCCameraConfig &new_config, uint32_t lev
   if (new_config.camera_info_url != config_.camera_info_url)
     cinfo_manager_.loadCameraInfo(new_config.camera_info_url);
 
-  if (state_ == kRunning) {
-#define PARAM_INT(name, fn, value) if (new_config.name != config_.name) { \
-      int val = (value);                                                \
-      if (uvc_set_##fn(devh_, val)) {                                   \
-        ROS_WARN("Unable to set " #name " to %d", val);                 \
-        new_config.name = config_.name;                                 \
-      }                                                                 \
-    }
-
-    PARAM_INT(scanning_mode, scanning_mode, new_config.scanning_mode);
-    PARAM_INT(auto_exposure, ae_mode, 1 << new_config.auto_exposure);
-    PARAM_INT(auto_exposure_priority, ae_priority, new_config.auto_exposure_priority);
-    PARAM_INT(exposure_absolute, exposure_abs, new_config.exposure_absolute * 10000);
-    PARAM_INT(auto_focus, focus_auto, new_config.auto_focus ? 1 : 0);
-    PARAM_INT(focus_absolute, focus_abs, new_config.focus_absolute);
-#if libuvc_VERSION     > 00005 /* version > 0.0.5 */
-    PARAM_INT(gain, gain, new_config.gain);
-    PARAM_INT(iris_absolute, iris_abs, new_config.iris_absolute);
-    PARAM_INT(brightness, brightness, new_config.brightness);
-#endif
+//  if (state_ == kRunning) {
+//#define PARAM_INT(name, fn, value) if (new_config.name != config_.name) { \
+//      int val = (value);                                                \
+//      if (uvc_set_##fn(devh_, val)) {                                   \
+//        ROS_WARN("Unable to set " #name " to %d", val);                 \
+//        new_config.name = config_.name;                                 \
+//      }                                                                 \
+//    }
+//
+//    PARAM_INT(scanning_mode, scanning_mode, new_config.scanning_mode);
+//    PARAM_INT(auto_exposure, ae_mode, 1 << new_config.auto_exposure);
+//    PARAM_INT(auto_exposure_priority, ae_priority, new_config.auto_exposure_priority);
+//    PARAM_INT(exposure_absolute, exposure_abs, new_config.exposure_absolute * 10000);
+//    PARAM_INT(auto_focus, focus_auto, new_config.auto_focus ? 1 : 0);
+//    PARAM_INT(focus_absolute, focus_abs, new_config.focus_absolute);
+//#if libuvc_VERSION     > 00005 /* version > 0.0.5 */
+//    PARAM_INT(gain, gain, new_config.gain);
+//    PARAM_INT(iris_absolute, iris_abs, new_config.iris_absolute);
+//    PARAM_INT(brightness, brightness, new_config.brightness);
+//#endif
     
 
-    if (new_config.pan_absolute != config_.pan_absolute || new_config.tilt_absolute != config_.tilt_absolute) {
-      if (uvc_set_pantilt_abs(devh_, new_config.pan_absolute, new_config.tilt_absolute)) {
-        ROS_WARN("Unable to set pantilt to %d, %d", new_config.pan_absolute, new_config.tilt_absolute);
-        new_config.pan_absolute = config_.pan_absolute;
-        new_config.tilt_absolute = config_.tilt_absolute;
-      }
-    }
+//    if (new_config.pan_absolute != config_.pan_absolute || new_config.tilt_absolute != config_.tilt_absolute) {
+//      if (uvc_set_pantilt_abs(devh_, new_config.pan_absolute, new_config.tilt_absolute)) {
+//        ROS_WARN("Unable to set pantilt to %d, %d", new_config.pan_absolute, new_config.tilt_absolute);
+//        new_config.pan_absolute = config_.pan_absolute;
+//        new_config.tilt_absolute = config_.tilt_absolute;
+//      }
+//    }
     // TODO: roll_absolute
     // TODO: privacy
     // TODO: backlight_compensation
@@ -157,13 +158,14 @@ void CameraDriver::ReconfigureCallback(UVCCameraConfig &new_config, uint32_t lev
     // TODO: white_balance_temperature
     // TODO: white_balance_BU
     // TODO: white_balance_RV
-  }
+//  }
 
   config_ = new_config;
 }
 
-void CameraDriver::ImageCallback(uvc_frame_t *frame) {
-  ros::Time timestamp = ros::Time(frame->capture_time.tv_sec, frame->capture_time.tv_usec);
+void CameraDriver::ImageCallback( uvc_frame_t *frame ) {
+  
+  ros::Time timestamp = ros::Time( frame->capture_time.tv_sec, frame->capture_time.tv_usec );
   if ( timestamp == ros::Time(0) ) {
     timestamp = ros::Time::now();
   }
@@ -178,79 +180,82 @@ void CameraDriver::ImageCallback(uvc_frame_t *frame) {
   assert(rgb_frame_);
 
   sensor_msgs::Image::Ptr image(new sensor_msgs::Image());
-  image->width = config_.width;
+  image->width  = config_.width;
   image->height = config_.height;
-  image->step = image->width * 3;
-  image->data.resize(image->step * image->height);
-
-  if (frame->frame_format == UVC_FRAME_FORMAT_BGR){
-    image->encoding = "bgr8";
-    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_RGB){
-    image->encoding = "rgb8";
-    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_UYVY) {
-    image->encoding = "yuv422";
-    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_GRAY8) {
-    image->encoding = "8UC1";
-    image->step = image->width;
-    image->data.resize(image->step * image->height);
-    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_GRAY16) {
+  image->step   = image->width * 3;
+  image->data.resize( image->step * image->height );
+  
+//  if (frame->frame_format == UVC_FRAME_FORMAT_BGR){
+//    image->encoding = "bgr8";
+//    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
+//  } else if (frame->frame_format == UVC_FRAME_FORMAT_RGB){
+//    image->encoding = "rgb8";
+//    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
+//  } else if (frame->frame_format == UVC_FRAME_FORMAT_UYVY) {
+//    image->encoding = "yuv422";
+//    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
+//  } else if (frame->frame_format == UVC_FRAME_FORMAT_GRAY8) {
+//    image->encoding = "8UC1";
+//    image->step = image->width;
+//    image->data.resize(image->step * image->height);
+//    memcpy(&(image->data[0]), frame->data, frame->data_bytes);
+//  } else 
+  if (frame->frame_format == UVC_FRAME_FORMAT_GRAY16) {
     image->encoding = "16UC1";
     image->step = image->width*2;
     image->data.resize(image->step * image->height);
     memcpy(&(image->data[0]), frame->data, frame->data_bytes);
-
+    
     // Ad-hoc: Change metric to mm
     uint16_t* data = reinterpret_cast<uint16_t*>(&image->data[0]);
     for (int i=0; i<image->height*image->width; i++)
     {
       data[i] = (uint16_t)(data[i]*0.406615*4.0);
     }
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_YUYV) {
-    // FIXME: uvc_any2bgr does not work on "yuyv" format, so use uvc_yuyv2bgr directly.
-    uvc_error_t conv_ret = uvc_yuyv2bgr(frame, rgb_frame_);
-    if (conv_ret != UVC_SUCCESS) {
-      uvc_perror(conv_ret, "Couldn't convert frame to RGB");
-      return;
-    }
-    image->encoding = "bgr8";
-    memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
-#if libuvc_VERSION     > 00005 /* version > 0.0.5 */
-  } else if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
-    // Enable mjpeg support despite uvs_any2bgr shortcoming
-    //  https://github.com/ros-drivers/libuvc_ros/commit/7508a09f
-    uvc_error_t conv_ret = uvc_mjpeg2rgb(frame, rgb_frame_);
-    if (conv_ret != UVC_SUCCESS) {
-      uvc_perror(conv_ret, "Couldn't convert frame to RGB");
-      return;
-    }
-    image->encoding = "rgb8";
-    memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
-#endif
-  } else {
+  }
+//  else if (frame->frame_format == UVC_FRAME_FORMAT_YUYV) {
+//    // FIXME: uvc_any2bgr does not work on "yuyv" format, so use uvc_yuyv2bgr directly.
+//    uvc_error_t conv_ret = uvc_yuyv2bgr(frame, rgb_frame_);
+//    if (conv_ret != UVC_SUCCESS) {
+//      uvc_perror(conv_ret, "Couldn't convert frame to RGB");
+//      return;
+//    }
+//    image->encoding = "bgr8";
+//    memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
+//#if libuvc_VERSION     > 00005 /* version > 0.0.5 */
+//  } else if (frame->frame_format == UVC_FRAME_FORMAT_MJPEG) {
+//    // Enable mjpeg support despite uvs_any2bgr shortcoming
+//    //  https://github.com/ros-drivers/libuvc_ros/commit/7508a09f
+//    uvc_error_t conv_ret = uvc_mjpeg2rgb(frame, rgb_frame_);
+//    if (conv_ret != UVC_SUCCESS) {
+//      uvc_perror(conv_ret, "Couldn't convert frame to RGB");
+//      return;
+//    }
+//    image->encoding = "rgb8";
+//    memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
+//#endif
+//  } 
+  else {
     uvc_error_t conv_ret = uvc_any2bgr(frame, rgb_frame_);
-    if (conv_ret != UVC_SUCCESS) {
-      uvc_perror(conv_ret, "Couldn't convert frame to RGB");
+    if ( conv_ret != UVC_SUCCESS ) {
+      ROS_ERROR( "Couldn't convert frame to RGB : Error.%d", conv_ret );
       return;
     }
     image->encoding = "bgr8";
     memcpy(&(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes);
   }
 
-
   sensor_msgs::CameraInfo::Ptr cinfo(
     new sensor_msgs::CameraInfo(cinfo_manager_.getCameraInfo()));
 
-  image->header.frame_id = config_.frame_id;
-  image->header.stamp = timestamp;
-  cinfo->header.frame_id = config_.frame_id;
-  cinfo->header.stamp = timestamp;
+  image->header.frame_id    = config_.frame_id;
+  image->header.stamp       = timestamp;
+  cinfo->header.frame_id    = config_.frame_id;
+  cinfo->header.stamp       = timestamp;
 
   cam_pub_.publish(image, cinfo);
-
+  TOF_PublishTemperature( config_.frame_id );
+  
   if (config_changed_) {
     config_server_.updateConfig(config_);
     config_changed_ = false;
@@ -357,7 +362,7 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
 
   // Implement missing index select behavior
   // https://github.com/ros-drivers/libuvc_ros/commit/4f30e9a0
-#if libuvc_VERSION     > 00005 /* version > 0.0.5 */
+// #if libuvc_VERSION     > 00005 /* version > 0.0.5 */
   uvc_error_t find_err = uvc_find_devices(
     ctx_, &devs,
     vendor_id,
@@ -365,7 +370,7 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
     new_config.serial.empty() ? NULL : new_config.serial.c_str());
 
   if (find_err != UVC_SUCCESS) {
-    uvc_perror(find_err, "uvc_find_device");
+    ROS_ERROR( "uvc_find_device" );
     return;
   }
 
@@ -387,19 +392,19 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
     ROS_ERROR("Unable to find device at index %d", new_config.index);
     return;
   }
-#else
-  uvc_error_t find_err = uvc_find_device(
-    ctx_, &dev_,
-    vendor_id,
-    product_id,
-    new_config.serial.empty() ? NULL : new_config.serial.c_str());
-
-  if (find_err != UVC_SUCCESS) {
-    uvc_perror(find_err, "uvc_find_device");
-    return;
-  }
-
-#endif
+//#else
+//  uvc_error_t find_err = uvc_find_device(
+//    ctx_, &dev_,
+//    vendor_id,
+//    product_id,
+//    new_config.serial.empty() ? NULL : new_config.serial.c_str());
+//
+//  if (find_err != UVC_SUCCESS) {
+//    ROS_ERROR( "uvc_find_device");
+//    return;
+//  }
+//
+//#endif
   uvc_error_t open_err = uvc_open(dev_, &devh_);
 
   if (open_err != UVC_SUCCESS) {
@@ -440,7 +445,7 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
     new_config.frame_rate);
 
   if (mode_err != UVC_SUCCESS) {
-    uvc_perror(mode_err, "uvc_get_stream_ctrl_format_size");
+    ROS_ERROR( "uvc_get_stream_ctrl_format_size");
     uvc_close(devh_);
     uvc_unref_device(dev_);
     ROS_ERROR("check video_mode/width/height/frame_rate are available");
@@ -451,7 +456,7 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
   uvc_error_t stream_err = uvc_start_streaming(devh_, &ctrl, &CameraDriver::ImageCallbackAdapter, this, 0);
 
   if (stream_err != UVC_SUCCESS) {
-    uvc_perror(stream_err, "uvc_start_streaming");
+    ROS_ERROR( "uvc_start_streaming");
     uvc_close(devh_);
     uvc_unref_device(dev_);
     return;
@@ -464,68 +469,24 @@ void CameraDriver::OpenCamera(UVCCameraConfig &new_config) {
   assert(rgb_frame_);
   
   
-  // TOF Settigns
+  // TOF Camera Settigns
   int tof_err;
   
-  uint16_t eeprom_mode = 0x0000;
-  tof_err = TOF_SetEEPROMMode( eeprom_mode );
-  tof_err = TOF_SetErrorClear();
+  // Set EEPROM Mode
+  tof_err = TOF_SetEEPROMMode( TOF_EEPROM_FACTORY_DEFAULT );
   
-  // Get TOF Camera Version
-  uint16_t version_n;
-  uint16_t build_n;
-  uint16_t build_y;
-  uint16_t build_d;
-  tof_err = TOF_GetVersion( version_n, build_n, build_y, build_d );
+  // Clear Errors
+  tof_err = TOF_ClearError();
   
   // Set ROS Parameters
-  TOF_SetMode_ROSParameter_All();
+  TOF_SetMode_All();
   
   // Get TOF Camera Informations
-  uint16_t depth_ir;
-  tof_err = TOF_GetDepthIR( depth_ir );
+  TOF_GetInfo_All();
   
-  uint16_t depth_range;
-  uint16_t dr_index;
-  tof_err = TOF_GetDepthRange( depth_range, dr_index );
-  
-  uint16_t threshold;
-  tof_err = TOF_GetThreshold( threshold );
-  
-  uint16_t nr_filter;
-  tof_err = TOF_GetNRFilter( nr_filter );
-  
-  uint16_t pulse_count;
-  tof_err = TOF_GetPulseCount( pulse_count );
-  
-  uint16_t ld_enable;
-  tof_err = TOF_GetLDEnable( ld_enable );
-  
-  double depth_cnv_gain;
-  tof_err = TOF_GetDepthCnvGain( depth_cnv_gain );
-  
-  short          offset_val;
-  unsigned short max_data;
-  unsigned short min_dist;
-  unsigned short max_dist;
-  tof_err = TOF_GetDepthInfo( offset_val, max_data, min_dist, max_dist );
-  
-  uint16_t ir_gain;
-  tof_err = TOF_GetIRGain( ir_gain );
-  
-  double t1;
-  double t2;
-  tof_err = TOF_GetTemparature( t1, t2 );
-  
-  uint16_t error_stop;
-  tof_err = TOF_GetErrorStop( error_stop );
-  
-  uint16_t common_err;
-  uint16_t eeprom_err_factory; 
-  uint16_t eeprom_err;
-  uint16_t mipi_temp_err;
-  tof_err = TOF_GetErrorInfo( common_err, eeprom_err_factory, eeprom_err, mipi_temp_err );
-  
+  // Set Publishers for TOF Camera Temperature
+  tof_t1_pub_ = nh_.advertise<sensor_msgs::Temperature>( "tof_t1", 1000 );
+  tof_t2_pub_ = nh_.advertise<sensor_msgs::Temperature>( "tof_t2", 1000 );
   
   state_ = kRunning;
 }
@@ -552,7 +513,7 @@ int CameraDriver::TOF_SetCtrl( uint16_t *data ,int size ) {
 int CameraDriver::TOF_GetCtrl( uint16_t *data, int size ) {
     
     int err;
-        
+    
     err = TOF_SetCtrl( data, size );
     if ( err != size ) {
         ROS_ERROR( "Set Ctrl to Get failed : Error: %d", err );
@@ -572,18 +533,28 @@ int CameraDriver::TOF_GetCtrl( uint16_t *data, int size ) {
 }
 
 
-void CameraDriver::TOF_SetMode_ROSParameter_All() {
+void CameraDriver::TOF_SetMode_All() {
     
     int err;
+    std::string rp_name;
+    std::string rosparam_names[8] =
+    {
+        "depth_ir",
+        "depth_range",
+        "threshold",
+        "nr_filter",
+        "pulse_count",
+        "ld_enable",
+        "ir_gain",
+        "error_stop"
+    };
     
-    err = TOF_SetMode_ROSParameter( "depth_ir" );
-    err = TOF_SetMode_ROSParameter( "depth_range" );
-    err = TOF_SetMode_ROSParameter( "threshold" );
-    err = TOF_SetMode_ROSParameter( "nr_filter" );
-    err = TOF_SetMode_ROSParameter( "pulse_count" );
-    err = TOF_SetMode_ROSParameter( "ld_enable" );
-    err = TOF_SetMode_ROSParameter( "ir_gain" );
-    err = TOF_SetMode_ROSParameter( "error_stop" );
+    int name_num = sizeof( rosparam_names ) / sizeof( rosparam_names[0] );
+    for ( int i = 0; i < name_num ; i++ ) {
+        rp_name = rosparam_names[i];
+        ROS_INFO( "%d. ROS Param : %s", i, rp_name.c_str() );
+        err = TOF_SetMode_ROSParameter( rosparam_names[i] );
+    }
     
     return;
 }
@@ -728,7 +699,7 @@ int CameraDriver::TOF_SetMode_ROSParameter( std::string param_name ) {
 }
 
 
-int CameraDriver::TOF_SetEEPROMMode( uint16_t mode = 0x0000 ) {
+int CameraDriver::TOF_SetEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT ) {
     
     uint16_t send[5] = { TOF_SET_EEPROM, 0, 0, 0, 0 };
     int err;
@@ -754,21 +725,82 @@ int CameraDriver::TOF_SetEEPROMMode( uint16_t mode = 0x0000 ) {
 }
 
 
-int CameraDriver::TOF_SetErrorClear() {
+int CameraDriver::TOF_ClearError() {
     
     uint16_t send[5] = { TOF_SET_ERROR_CLEAR, 0, 0, 0, 0 };
     int err;
     
     err = TOF_SetCtrl( send, sizeof(send) );
     if ( err == sizeof(send) ) {
-        ROS_INFO( "Set Error Clear" );
+        ROS_INFO( "Clear TOF Camera Errors" );
     }
     else {
-        ROS_ERROR( "Set Error Clear failed. Error: %d", err );
+        ROS_ERROR( "Clear TOF Camera Errors failed. Error: %d", err );
         return err;
     }
     
     return err;
+}
+
+
+void CameraDriver::TOF_GetInfo_All() {
+    
+    int tof_err;
+    
+    // Get TOF Camera Informations
+    
+    uint16_t version_n;
+    uint16_t build_n;
+    uint16_t build_y;
+    uint16_t build_d;
+    tof_err = TOF_GetVersion( version_n, build_n, build_y, build_d );
+    
+    uint16_t depth_ir;
+    tof_err = TOF_GetDepthIR( depth_ir );
+    
+    uint16_t depth_range;
+    uint16_t dr_index;
+    tof_err = TOF_GetDepthRange( depth_range, dr_index );
+    
+    uint16_t threshold;
+    tof_err = TOF_GetThreshold( threshold );
+    
+    uint16_t nr_filter;
+    tof_err = TOF_GetNRFilter( nr_filter );
+    
+    uint16_t pulse_count;
+    tof_err = TOF_GetPulseCount( pulse_count );
+    
+    uint16_t ld_enable;
+    tof_err = TOF_GetLDEnable( ld_enable );
+    
+    double depth_cnv_gain;
+    tof_err = TOF_GetDepthCnvGain( depth_cnv_gain );
+    
+    short          offset_val;
+    unsigned short max_data;
+    unsigned short min_dist;
+    unsigned short max_dist;
+    tof_err = TOF_GetDepthInfo( offset_val, max_data, min_dist, max_dist );
+    
+    uint16_t ir_gain;
+    tof_err = TOF_GetIRGain( ir_gain );
+    
+    double t1;
+    double t2;
+    tof_err = TOF_GetTemperature( t1, t2 );
+    ROS_INFO( "Get Temperature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
+    
+    uint16_t error_stop;
+    tof_err = TOF_GetErrorStop( error_stop );
+    
+    uint16_t common_err;
+    uint16_t eeprom_err_factory; 
+    uint16_t eeprom_err;
+    uint16_t mipi_temp_err;
+    tof_err = TOF_GetErrorInfo( common_err, eeprom_err_factory, eeprom_err, mipi_temp_err );
+    
+    return;
 }
 
 
@@ -942,19 +974,19 @@ int CameraDriver::TOF_GetIRGain( uint16_t& ir_gain ) {
 }
 
 
-int CameraDriver::TOF_GetTemparature( double& t1, double& t2 ) {
+int CameraDriver::TOF_GetTemperature( double& t1, double& t2 ) {
     
-    uint16_t data[5] = { TOF_GET_TEMPARATURE, 0, 0, 0, 0 };
+    uint16_t data[5] = { TOF_GET_TEMPERATURE, 0, 0, 0, 0 };
     int err;
     
     err = TOF_GetCtrl( data, sizeof(data) );
     if ( err == sizeof(data) ) {
         t1 = data[1] / 256.0;
         t2 = data[2] / 256.0;
-        ROS_INFO( "Get Temparature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
+        // ROS_INFO( "Get Temperature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
     }
     else {
-        ROS_ERROR( "Get Temparature failed. Error: %d", err );
+        ROS_ERROR( "Get Temperature failed. Error: %d", err );
     }
     
     return err;
@@ -993,7 +1025,7 @@ int CameraDriver::TOF_GetVersion(   uint16_t& version_n,
         build_n   = data[2];
         build_y   = data[3];
         build_d   = data[4];
-        ROS_INFO( "Get Version : %x / Build Number : %x / Build Date : %x%x(YYYYMMDD)", 
+        ROS_INFO( "Get Version : %x / Build : %x / Build Date : %x%x (YYYYMMDD)", 
                     version_n, build_n, build_y, build_d );
     }
     else {
@@ -1018,7 +1050,7 @@ int CameraDriver::TOF_GetErrorInfo( uint16_t& common_err,
         eeprom_err_factory  = data[2];
         eeprom_err          = data[3];
         mipi_temp_err       = data[4];
-        ROS_INFO( "Get Error Info - Common : 0x%02x / EEPROM Factory : 0x%02x / EEPROM : 0x%02x / MIPI/Temparature : 0x%02x", 
+        ROS_INFO( "Get Error Info - Common : 0x%02x / EEPROM Factory : 0x%02x / EEPROM : 0x%02x / MIPI/Temperature : 0x%02x", 
                     common_err, eeprom_err_factory, eeprom_err, mipi_temp_err );
     }
     else {
@@ -1028,20 +1060,41 @@ int CameraDriver::TOF_GetErrorInfo( uint16_t& common_err,
     return err;
 }
 
+
+void CameraDriver::TOF_PublishTemperature( std::string frame_id ) {
+    
+    sensor_msgs::Temperature t_msg;
+    
+    double t1;
+    double t2;
+    
+    TOF_GetTemperature( t1, t2 );
+    
+    t_msg.header.frame_id = frame_id;
+    t_msg.header.stamp    = ros::Time::now();
+    
+    t_msg.temperature = t1;
+    tof_t1_pub_.publish( t_msg );
+    
+    t_msg.temperature = t2;
+    tof_t2_pub_.publish( t_msg );
+    
+    return;
+}
+
 // End of TOF Camera Video Control Interface Functions
 
 
-
 void CameraDriver::CloseCamera() {
-  assert(state_ == kRunning);
-
-  uvc_close(devh_);
-  devh_ = NULL;
-
-  uvc_unref_device(dev_);
-  dev_ = NULL;
-
-  state_ = kStopped;
+    assert( state_ == kRunning );
+    
+    uvc_close( devh_ );
+    devh_ = NULL;
+    
+    uvc_unref_device( dev_ );
+    dev_ = NULL;
+    
+    state_ = kStopped;
 }
 
 };

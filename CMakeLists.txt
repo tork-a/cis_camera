@@ -14,7 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   nodelet
   sensor_msgs
-  libuvc_camera
+#  libuvc_ros
+#  libuvc_camera
 )
 
 ## System dependencies are found with CMake's conventions
@@ -95,7 +96,7 @@ find_package(catkin REQUIRED COMPONENTS
 generate_dynamic_reconfigure_options(
 #   cfg/DynReconf1.cfg
 #   cfg/DynReconf2.cfg
-#   cfg/UVCCamera.cfg
+   cfg/UVCCamera.cfg
 )
 
 
@@ -123,7 +124,6 @@ catkin_package(
     image_transport
     nodelet
     sensor_msgs
-    libuvc_camera
   LIBRARIES cis_camera_nodelet
 )
 
@@ -163,10 +163,10 @@ install(FILES cis_camera_nodelet.xml
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
+# include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
-)
+#  ${catkin_INCLUDE_DIRS}
+# )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
