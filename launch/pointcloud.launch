@@ -1,20 +1,21 @@
 <launch>
+  
   <arg name="rviz" default="true" />
   <arg name="camera" default="camera" />
   <arg name="num_worker_threads" default="4" />
   
-  <arg name="depth_ir"      default="0" />
-  <arg name="depth_range"   default="0" />
-  <arg name="threshold"     default="0" />
-  <arg name="nr_filter"     default="1" />
-  <arg name="pulse_count"   default="1000" />
-  <arg name="ld_enable"     default="15" />
-  <arg name="ir_gain"       default="1024" />
-  <arg name="error_stop"    default="0" />
+  <arg name="depth_ir"    default="0" />
+  <arg name="depth_range" default="0" />
+  <arg name="threshold"   default="0" />
+  <arg name="nr_filter"   default="1" />
+  <arg name="pulse_count" default="1000" />
+  <arg name="ld_enable"   default="15" />
+  <arg name="ir_gain"     default="1024" />
+  <arg name="error_stop"  default="0" />
   
   <node name="map_to_camera" pkg="tf" type="static_transform_publisher"
-	args="0 0 1.0 1.57 0 -1.57 map camera 100"/>
-
+        args="0 0 1.0 1.57 0 -1.57 map camera 100" />
+  
   <!-- TOF camera launch -->
   <include file="$(find cis_camera)/launch/tof.launch" >
     <arg name="depth_ir"    value="$(arg depth_ir)" />
@@ -26,15 +27,15 @@
     <arg name="ir_gain"     value="$(arg ir_gain)" />
     <arg name="error_stop"  value="$(arg error_stop)" />
   </include>
-
+  
   <!-- rviz -->
   <node if="$(arg rviz)"
         name="rviz" pkg="rviz" type="rviz"
-	args="-d $(find cis_camera)/launch/pointcloud.rviz"/>
+        args="-d $(find cis_camera)/launch/pointcloud.rviz"/>
   
   <group ns="$(arg camera)">
     <arg name="manager" value="$(arg camera)_nodelet_manager"/>
-    <arg name="debug" default="false" /> <!-- Run manager in GDB? -->
+    <arg name="debug"   default="false" /> <!-- Run manager in GDB? -->
     
     <include file="$(find rgbd_launch)/launch/includes/manager.launch.xml">
       <arg name="name"                value="$(arg manager)" />
@@ -55,4 +56,5 @@
       <arg name="sw_registered_processing" value="false" />
     </include>
   </group>
+  
 </launch>

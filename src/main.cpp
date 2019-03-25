@@ -31,16 +31,17 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
+
 #include <ros/ros.h>
 
 #include "cis_camera/camera_driver.h"
 
 
-int main (int argc, char **argv) {
+int main( int argc, char **argv ) {
     
     ros::init( argc, argv, "cis_camera" );
     ros::NodeHandle nh;
-    ros::NodeHandle priv_nh("~");
+    ros::NodeHandle priv_nh( "~" );
     
     cis_camera::CameraDriver driver( nh, priv_nh );
     

@@ -29,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -191,5 +191,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1565
-  X: 355
-  Y: 30
+  X: 65
+  Y: 24
