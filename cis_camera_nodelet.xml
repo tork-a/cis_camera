@@ -1,0 +1,9 @@
+<library path="lib/cis_camera_nodelet">
+  <class name="cis_camera/driver"
+         type="cis_camera::CameraNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description> 
+      CIS camera driver nodelet.
+    </description>
+  </class>
+</library>
