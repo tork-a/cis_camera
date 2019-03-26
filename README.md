@@ -14,8 +14,6 @@ $ mkdir -p ~/catkin_ws/src
 $ cd ~/catkin_ws/src
 $ catkin_init_workspace
 $ git clone https://github.com/tork-a/cis_camera.git
-$ cd ~/catkin_ws/src/cis_camera
-$ git checkout mod_test
 $ cd ~/catkin_ws
 $ rosdep install -y -r --from-paths src --ignore-src
 $ catkin_make
