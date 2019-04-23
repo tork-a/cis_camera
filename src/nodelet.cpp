@@ -38,43 +38,47 @@
 
 #include "cis_camera/camera_driver.h"
 
-namespace cis_camera {
+namespace cis_camera
+{
 
-class CameraNodelet : public nodelet::Nodelet {
-
+class CameraNodelet : public nodelet::Nodelet
+{
 public:
-    
-    CameraNodelet() : running_(false) {}
-    ~CameraNodelet();
-    
+  
+  CameraNodelet() : running_(false) {}
+  ~CameraNodelet();
+  
 private:
-    
-    virtual void onInit();
-    
-    volatile bool running_;
-    boost::shared_ptr<CameraDriver> driver_;
+  
+  virtual void onInit();
+  
+  volatile bool running_;
+  boost::shared_ptr<CameraDriver> driver_;
 };
 
-CameraNodelet::~CameraNodelet() {
-    
-    if (running_) {
-        driver_->Stop();
-    }
+CameraNodelet::~CameraNodelet()
+{
+  if (running_)
+  {
+    driver_->Stop();
+  }
 }
 
-void CameraNodelet::onInit() {
-    
-    ros::NodeHandle nh(getNodeHandle());
-    ros::NodeHandle priv_nh(getPrivateNodeHandle());
-    
-    driver_.reset(new CameraDriver(nh, priv_nh));
-    if (driver_->Start()) {
-        running_ = true;
-    } 
-    else {
-        NODELET_ERROR("Unable to open camera.");
-        driver_.reset();
-    }
+void CameraNodelet::onInit()
+{
+  ros::NodeHandle nh(getNodeHandle());
+  ros::NodeHandle priv_nh(getPrivateNodeHandle());
+  
+  driver_.reset(new CameraDriver(nh, priv_nh));
+  if (driver_->Start())
+  {
+    running_ = true;
+  } 
+  else
+  {
+    NODELET_ERROR("Unable to open camera.");
+    driver_.reset();
+  }
 }
 
 };
@@ -82,4 +86,4 @@ void CameraNodelet::onInit() {
 // Register this plugin with pluginlib.
 //
 // parameters are: class type, base class type
-PLUGINLIB_EXPORT_CLASS(cis_camera::CameraNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS( cis_camera::CameraNodelet, nodelet::Nodelet )
