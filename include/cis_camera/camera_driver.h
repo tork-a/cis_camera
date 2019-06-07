@@ -146,6 +146,7 @@ private:
   bool            config_changed_;
   
   camera_info_manager::CameraInfoManager cinfo_manager_;
+  
 };
 
 };

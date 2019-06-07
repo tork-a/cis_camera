@@ -29,8 +29,11 @@
       <param name="error_stop"  value="$(arg error_stop)" />
       
       <!-- Image size and type -->
-      <param name="width"       value="640" />
-      <param name="height"      value="480" />
+<!--      <param name="width"       value="640" /> -->
+<!--      <param name="height"      value="480" /> -->
+      <param name="width"       value="1920" />
+      <param name="height"      value="960" />
+<!--      <param name="video_mode"  value="gray16" /> -->
       <param name="video_mode"  value="gray16" />
       <param name="frame_rate"  value="30" />
       <param name="frame_id"    value="camera" />
