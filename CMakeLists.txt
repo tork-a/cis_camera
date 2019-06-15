@@ -9,9 +9,12 @@ find_package(catkin REQUIRED COMPONENTS
   camera_info_manager
   dynamic_reconfigure
   image_transport
+  pluginlib
   nodelet
   sensor_msgs
+  cv_bridge
 )
+find_package(OpenCV)
 
 generate_dynamic_reconfigure_options(
   cfg/CISCamera.cfg
@@ -28,6 +31,7 @@ catkin_package(
     image_transport
     nodelet
     sensor_msgs
+    cv_bridge
   LIBRARIES
     cis_camera_nodelet
 )
@@ -62,7 +66,9 @@ install(FILES cis_camera_nodelet.xml
 
 ## Mark executables and/or libraries for installation
 install(DIRECTORY config launch test
-DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+  )
 
 #############
 ## Testing ##

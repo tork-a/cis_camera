@@ -66,8 +66,8 @@ CameraNodelet::~CameraNodelet()
 
 void CameraNodelet::onInit()
 {
-  ros::NodeHandle nh(getNodeHandle());
-  ros::NodeHandle priv_nh(getPrivateNodeHandle());
+  ros::NodeHandle nh( getNodeHandle() );
+  ros::NodeHandle priv_nh( getPrivateNodeHandle() );
   
   driver_.reset(new CameraDriver(nh, priv_nh));
   if (driver_->Start())

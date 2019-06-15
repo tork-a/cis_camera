@@ -43,6 +43,8 @@ private:
   static const int ReconfigureStop    = 1; // Need to stop the stream before changing this setting
   static const int ReconfigureRunning = 0; // We can change this setting without stopping the stream
   
+  void readConfigFromParameterServer();
+  void advertiseROSTopics();
   void OpenCamera();
   void CloseCamera();
   
@@ -122,8 +124,8 @@ private:
   
   void publishToFTemperature( std::string frame_id );
   
-  ros::Publisher tof_t1_pub_;
-  ros::Publisher tof_t2_pub_;
+  ros::Publisher pub_tof_t1_;
+  ros::Publisher pub_tof_t2_;
   
   // END TOF Camera
   
@@ -138,7 +140,10 @@ private:
   uvc_frame_t         *rgb_frame_;
   
   image_transport::ImageTransport  it_;
-  image_transport::CameraPublisher cam_pub_;
+  image_transport::CameraPublisher pub_camera_;
+  image_transport::CameraPublisher pub_color_;
+  image_transport::CameraPublisher pub_depth_;
+  image_transport::CameraPublisher pub_ir_;
   
   dynamic_reconfigure::Server<CISCameraConfig> config_server_;
   
@@ -146,6 +151,12 @@ private:
   bool            config_changed_;
   
   camera_info_manager::CameraInfoManager cinfo_manager_;
+  camera_info_manager::CameraInfoManager cinfo_manager_color_;
+  camera_info_manager::CameraInfoManager cinfo_manager_ir_;
+  
+  std::string camera_info_url_;
+  std::string camera_info_url_ir_;
+  std::string camera_info_url_color_;
   
 };
 

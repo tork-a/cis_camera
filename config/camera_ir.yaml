@@ -1,15 +1,18 @@
 image_width: 640
 image_height: 480
-camera_name: ir_camera
+camera_name: ir
 camera_matrix:
   rows: 3
   cols: 3
-  data: [300, 0, 320, 0, 300, 240, 0, 0, 1]
+  data: [ 3.9119801003143380e+02, 0, 3.3486626184020076e+02, 0.,
+          3.8986503665775365e+02, 2.3274206110463527e+02, 0, 0, 1 ]
 distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
   cols: 5
-  data: [0 , 0, 0, 0, 0]
+  data: [ -1.9078608250890108e-01, 6.9202600098474620e-02,
+          -1.0520961256337650e-04, 4.7836994397747971e-04,
+          -1.5156511699550282e-02 ]
 rectification_matrix:
   rows: 3
   cols: 3
