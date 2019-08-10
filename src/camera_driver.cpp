@@ -148,6 +148,8 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
 {
   boost::recursive_mutex::scoped_lock( mutex_ );
   
+  ROS_INFO( "Reconfigure Request" );
+  
   if ( (level & ReconfigureClose) == ReconfigureClose )
   {
     if ( state_ == Running )
@@ -157,6 +159,39 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
   if ( state_ == Stopped )
   {
     OpenCamera();
+  }
+  
+  if ( state_ == Running )
+  {
+    if ( new_config.depth_range != config_.depth_range )
+    {
+      setToFMode_ROSParameter( "depth_range", new_config.depth_range );
+    }
+    
+    if ( new_config.threshold != config_.threshold )
+    {
+      setToFMode_ROSParameter( "threshold", new_config.threshold );
+    }
+    
+    if ( new_config.nr_filter != config_.nr_filter )
+    {
+      setToFMode_ROSParameter( "nr_filter", new_config.nr_filter );
+    }
+    
+    if ( new_config.pulse_count != config_.pulse_count )
+    {
+      setToFMode_ROSParameter( "pulse_count", new_config.pulse_count );
+    }
+    
+    if ( new_config.ld_enable != config_.ld_enable )
+    {
+      setToFMode_ROSParameter( "ld_enable", new_config.ld_enable );
+    }
+    
+    if ( new_config.ir_gain != config_.ir_gain )
+    {
+      setToFMode_ROSParameter( "ir_gain", new_config.ir_gain );
+    }
   }
   
   config_ = new_config;
@@ -619,10 +654,10 @@ int CameraDriver::getToFCtrl( uint16_t *data, int size )
 }
 
 
-void CameraDriver::setToFMode_All()
+int CameraDriver::setToFMode_All()
 {
   int err;
-  std::string rp_name;
+  
 //  std::string rosparam_names[8] =
   std::string rosparam_names[6] =
   {
@@ -635,20 +670,35 @@ void CameraDriver::setToFMode_All()
     "ir_gain",
 //    "error_stop"
   };
-
+  std::string param_name;
+  
+  int param;
   int name_num = sizeof( rosparam_names ) / sizeof( rosparam_names[0] );
+  
   for ( int i = 0; i < name_num ; i++ )
   {
-    rp_name = rosparam_names[i];
-    ROS_INFO( "%d. ROS Param : %s", i, rp_name.c_str() );
-    err = setToFMode_ROSParameter( rosparam_names[i] );
+    param_name = rosparam_names[i];
+    ROS_INFO( "%d. ROS Param : %s", i, param_name.c_str() );
+
+    int err   = 0;
+    
+    // Get ROS Parameter and Set Data
+    if ( priv_nh_.getParam( param_name, param ) )
+    {
+      err = setToFMode_ROSParameter( param_name, param );
+    }
+    else
+    {
+      ROS_ERROR( "Parameter Acquisition Error : %s", param_name.c_str() );
+      return err;
+    }
   }
   
-  return;
+  return err;
 }
 
 
-int CameraDriver::setToFMode_ROSParameter( std::string param_name )
+int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0 )
 {
   uint16_t send[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
   uint16_t recv[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
@@ -657,115 +707,106 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name )
   int param_min[5] = { 0x0000, 0, 0, 0, 0 };
   int param_max[5] = { 0xFFFF, 1, 1, 1, 1 };
   
-  int param = 0;
+//  int param = 0;
   int err   = 0;
   
-  // Get ROS Parameter and Set Data
-  err = priv_nh_.getParam( param_name, param );
-  if ( err )
+  // Set Parameter MAX/min and ToF Process Number
+  if ( param_name == "depth_ir" )
   {
-    if ( param_name == "depth_ir" )
-    {
-      param_set[0] = TOF_SET_DEPTH_IR;
-      param_set[1] = param;
-      
-      param_min[1] = 0;
-      param_max[1] = 1;
-      
-      recv[0] = TOF_GET_DEPTH_IR;
-    }
-    else if ( param_name == "depth_range" )
-    {
-      param_set[0] = TOF_SET_DEPTH_RANGE;
-      param_set[1] = param;
-      
-      param_min[1] = 0;
-//      param_max[1] = 1;
-      param_max[1] = 2;
-      
-      recv[0] = TOF_GET_DEPTH_RANGE;
-    }
-    else if ( param_name == "threshold" )
-    {
-      param_set[0] = TOF_SET_THRESHOLD;
-      param_set[1] = param;
-      
-      param_min[1] = 0x0000;
-      param_max[1] = 0x3FFF;
-      
-      recv[0] = TOF_GET_THRESHOLD;
-    }
-    else if ( param_name == "nr_filter" )
-    {
-      param_set[0] = TOF_SET_NR_FILTER;
-      param_set[1] = param;
-      
-      param_min[1] = 0;
-      param_max[1] = 1;
-      
-      recv[0] = TOF_GET_NR_FILTER;
-    }
-    else if ( param_name == "pulse_count" )
-    {
-      param_set[0] = TOF_SET_PULSE_COUNT;
-      param_set[1] = param;
-      
-      param_min[1] = 1;
-//      param_max[1] = 2000;
-      param_max[1] = 0xFFFF;
-      
-      recv[0] = TOF_GET_PULSE_COUNT;
-    }
-    else if ( param_name == "ld_enable" )
-    {
-      param_set[0] = TOF_SET_LD_ENABLE;
-      param_set[1] = param;
-
-      param_min[1] = 0;
-//      param_max[1] = 15;
-      param_max[1] = 3;
-      
-      recv[0] = TOF_GET_LD_ENABLE;
-    }
-    else if ( param_name == "ir_gain" )
-    {
-      param_set[0] = TOF_SET_IR_GAIN;
-      param_set[1] = param;
-      
-      param_min[1] = 0;
-      param_max[1] = 0x07FF;
-      
-      recv[0] = TOF_GET_IR_GAIN;
-    }
-    else if ( param_name == "error_stop" )
-    {
-      param_set[0] = TOF_SET_ERROR_STOP;
-      param_set[1] = param;
-      
-      param_min[1] = 0;
-      param_max[1] = 1;
-      
-      recv[0] = TOF_GET_ERROR_STOP;
-    }
-    else
-    {
-      ROS_WARN( "Unmatch Parameter Name : %s", param_name.c_str() );
-      err = 0;
-      return err;
-    }
+    param_set[0] = TOF_SET_DEPTH_IR;
+    param_set[1] = param;
     
-    // Value Check
-    for ( int i = 0; i < 5; i++ )
-    {
-      if ( param_set[i] < param_min[i] )      send[i] = param_min[i];
-      else if ( param_max[i] < param_set[i] ) send[i] = param_max[i];
-      else                                    send[i] = param_set[i];
-    }
+    param_min[1] = 0;
+    param_max[1] = 1;
+    
+    recv[0] = TOF_GET_DEPTH_IR;
+  }
+  else if ( param_name == "depth_range" )
+  {
+    param_set[0] = TOF_SET_DEPTH_RANGE;
+    param_set[1] = param;
+    
+    param_min[1] = 0;
+//      param_max[1] = 1;
+    param_max[1] = 2;
+    
+    recv[0] = TOF_GET_DEPTH_RANGE;
+  }
+  else if ( param_name == "threshold" )
+  {
+    param_set[0] = TOF_SET_THRESHOLD;
+    param_set[1] = param;
+    
+    param_min[1] = 0x0000;
+    param_max[1] = 0x3FFF;
+    
+    recv[0] = TOF_GET_THRESHOLD;
+  }
+  else if ( param_name == "nr_filter" )
+  {
+    param_set[0] = TOF_SET_NR_FILTER;
+    param_set[1] = param;
+    
+    param_min[1] = 0;
+    param_max[1] = 1;
+    
+    recv[0] = TOF_GET_NR_FILTER;
+  }
+  else if ( param_name == "pulse_count" )
+  {
+    param_set[0] = TOF_SET_PULSE_COUNT;
+    param_set[1] = param;
+    
+    param_min[1] = 1;
+//      param_max[1] = 2000;
+    param_max[1] = 0xFFFF;
+    
+    recv[0] = TOF_GET_PULSE_COUNT;
+  }
+  else if ( param_name == "ld_enable" )
+  {
+    param_set[0] = TOF_SET_LD_ENABLE;
+    param_set[1] = param;
+
+    param_min[1] = 0;
+//      param_max[1] = 15;
+    param_max[1] = 3;
+    
+    recv[0] = TOF_GET_LD_ENABLE;
+  }
+  else if ( param_name == "ir_gain" )
+  {
+    param_set[0] = TOF_SET_IR_GAIN;
+    param_set[1] = param;
+    
+    param_min[1] = 0;
+    param_max[1] = 0x07FF;
+    
+    recv[0] = TOF_GET_IR_GAIN;
+  }
+  else if ( param_name == "error_stop" )
+  {
+    param_set[0] = TOF_SET_ERROR_STOP;
+    param_set[1] = param;
+    
+    param_min[1] = 0;
+    param_max[1] = 1;
+    
+    recv[0] = TOF_GET_ERROR_STOP;
   }
   else
   {
-    ROS_ERROR( "Parameter Acquisition Error : %s", param_name.c_str() );
+    ROS_WARN( "Unmatch Parameter Name : %s", param_name.c_str() );
+    err = 0;
     return err;
+  }
+  
+  // Max/min Value Check
+  for ( int i = 0; i < 5; i++ )
+  {
+    if ( param_set[i] < param_min[i] )      send[i] = param_min[i];
+    else if ( param_max[i] < param_set[i] ) send[i] = param_max[i];
+    else                                    send[i] = param_set[i];
   }
   
   // Set Parameter on TOF Camera
@@ -782,17 +823,17 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name )
   }
   
   // Get Parameter on TOF Camera for Check
-  err = getToFCtrl( recv, sizeof(recv) );
-  if ( err == sizeof(recv) )
-  {
-    ROS_INFO( "Get Parameter %s as { %d, %d, %d, %d } on TOF Camera",
-                param_name.c_str(), recv[1], recv[2], recv[3], recv[4] );
-  }
-  else
-  {
-    ROS_ERROR( "Get Parameter of %s for Check Failed. Error : %d", param_name.c_str(), err );
-    return err;
-  }
+//  err = getToFCtrl( recv, sizeof(recv) );
+//  if ( err == sizeof(recv) )
+//  {
+//    ROS_INFO( "Get Parameter %s as { %d, %d, %d, %d } on TOF Camera",
+//                param_name.c_str(), recv[1], recv[2], recv[3], recv[4] );
+//  }
+//  else
+//  {
+//    ROS_ERROR( "Get Parameter of %s for Check Failed. Error : %d", param_name.c_str(), err );
+//    return err;
+//  }
   
   return err;
 }

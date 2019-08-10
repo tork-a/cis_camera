@@ -25,7 +25,7 @@ public:
   bool Start();
   void Stop();
   
-  void setToFMode_All();
+  int  setToFMode_All();
   void getToFInfo_All();
   
   
@@ -58,6 +58,11 @@ private:
   
   
   // TOF Camera
+  enum uvc_extention_unit_id
+  {
+    UVC_EXT_UNIT_TOF = 3,
+    UVC_EXT_UNIT_RGB = 9
+  };
   
   enum tof_process_num
   {
@@ -95,7 +100,7 @@ private:
   int setToFCtrl( uint16_t *data ,int len );
   int getToFCtrl( uint16_t *data ,int len );
   
-  int setToFMode_ROSParameter( std::string param_name );
+  int setToFMode_ROSParameter( std::string param_name, int param );
   int setToFEEPROMMode( uint16_t mode );
   int clearToFError();
   
