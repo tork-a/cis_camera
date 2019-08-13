@@ -146,6 +146,7 @@ private:
   
   image_transport::ImageTransport  it_;
   image_transport::CameraPublisher pub_camera_;
+  image_transport::CameraPublisher pub_bgr8_;
   image_transport::CameraPublisher pub_color_;
   image_transport::CameraPublisher pub_depth_;
   image_transport::CameraPublisher pub_ir_;

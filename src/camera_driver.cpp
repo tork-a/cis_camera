@@ -95,6 +95,9 @@ void CameraDriver::advertiseROSTopics()
   ros::NodeHandle color_nh( nh_, "rgb" );
   image_transport::ImageTransport color_it( color_nh );
   
+  ros::NodeHandle bgr8_nh( nh_, "bgr8" );
+  image_transport::ImageTransport bgr8_it( bgr8_nh );
+  
   ros::NodeHandle depth_nh( nh_, "depth" );
   image_transport::ImageTransport depth_it( depth_nh );
   
@@ -104,6 +107,7 @@ void CameraDriver::advertiseROSTopics()
   // Advertise Camera Pubishers
   pub_camera_ = it_.advertiseCamera( "image_raw", 1, false );
   pub_color_  = color_it.advertiseCamera( "image_raw", 1, false );
+  pub_bgr8_   = bgr8_it.advertiseCamera( "image_raw", 1, false );
   pub_depth_  = depth_it.advertiseCamera( "image_raw", 1, false );
   pub_ir_     = ir_it.advertiseCamera( "image_raw", 1, false );
   
@@ -199,6 +203,14 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
 }
 
 
+uint8_t cvtDoubleToByte( double x )
+{
+  if ( x < 0 )        return 0;
+  else if ( 255 < x ) return 255;
+  
+  return static_cast<uint8_t>( x );
+}
+
 void CameraDriver::ImageCallback( uvc_frame_t *frame )
 {
   ros::Time timestamp = ros::Time( frame->capture_time.tv_sec, frame->capture_time.tv_usec );
@@ -229,6 +241,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   image->step   = image->width * 3;
   image->data.resize( image->step * image->height );
   
+  sensor_msgs::Image::Ptr image_bgr8( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_color( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_depth( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_ir( new sensor_msgs::Image() );
@@ -270,7 +283,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     
     memcpy( &(image_color->data[0]), color_data, color_width * color_height * sizeof(uint16_t) );
     
-    // Converting YUV422 to BGR8
+    // Converting YUV422 to BGR8 with OpenCV
     cv_bridge::CvImagePtr cv_ptr_yuv;
     try
     {
@@ -281,14 +294,62 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       ROS_ERROR( "cv_bridge exception: %s", e.what() );
     }
     cv::Mat mat_rgb;
-    cv::cvtColor( cv_ptr_yuv->image, mat_rgb, cv::COLOR_YUV2RGB_UYVY );
-
+//    cv::cvtColor( cv_ptr_yuv->image, mat_rgb, cv::COLOR_YUV2RGB_UYVY );
+    cv::cvtColor( cv_ptr_yuv->image, mat_rgb, cv::COLOR_YUV2BGR_UYVY );
+    
     image_rgb.image    = mat_rgb;
     image_rgb.encoding = "bgr8";
     
     image_rgb.header          = image_color->header;
     image_rgb.header.frame_id = frame_id;
     image_rgb.header.stamp    = timestamp;
+    
+    
+    // Converting YUV422 to BGR8
+    image_bgr8->encoding = "bgr8";
+    image_bgr8->width  = color_width;
+    image_bgr8->height = color_height;
+    image_bgr8->step   = image_bgr8->width * 3;
+    image_bgr8->data.resize( image_bgr8->step * image_bgr8->height );
+    
+    uint8_t *uyvy_ptr;
+    uint8_t *bgr8_ptr;
+    
+    uyvy_ptr = reinterpret_cast<uint8_t*>( &(color_data[0]) );
+    bgr8_ptr = reinterpret_cast<uint8_t*>( &(image_bgr8->data[0]) );
+    
+    double u0, y0, v0, y1;
+    double r0, g0, b0;
+    
+    int half_pixels = color_width * color_height / 2;
+    for ( int i = 0; i < half_pixels; i++ )
+    {
+      u0 = static_cast<double>( *(uyvy_ptr) );
+      y0 = static_cast<double>( *(uyvy_ptr+1) );
+      v0 = static_cast<double>( *(uyvy_ptr+2) );
+      y1 = static_cast<double>( *(uyvy_ptr+3) );
+      
+      r0 = 1.547800 * ( v0 - 128 );
+      g0 = 0.187324 * ( u0 - 128 ) - 0.468124 * ( v0 - 128 );
+      b0 = 1.855600 * ( u0 - 128 );
+      
+      *(bgr8_ptr)   = cvtDoubleToByte( y0 + b0 );
+      *(bgr8_ptr+1) = cvtDoubleToByte( y0 + g0 );
+      *(bgr8_ptr+2) = cvtDoubleToByte( y0 + r0 );
+      
+      *(bgr8_ptr+3) = cvtDoubleToByte( y1 + b0 );
+      *(bgr8_ptr+4) = cvtDoubleToByte( y1 + g0 );
+      *(bgr8_ptr+5) = cvtDoubleToByte( y1 + r0 );
+      
+      uyvy_ptr += 4;
+      bgr8_ptr += 6;
+    }
+    
+//    uint8_t* color_ptr = reinterpret_cast<uint8_t*>( &(color_data[0]) );
+//    memcpy( &(uyvy_data[0]), color_ptr, color_width * color_height * 2 * sizeof(uint8_t) );
+    
+//    memcpy( &(image_bgr8->data[0]), bgr8_data, color_width * color_height * 3 );
+    
     
     // Cropping Depth and IR Image Frame
     int depth_width  = 640;
@@ -362,6 +423,9 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   image_color->header.frame_id = frame_id;
   image_color->header.stamp    = timestamp;
   
+  image_bgr8->header.frame_id = frame_id;
+  image_bgr8->header.stamp    = timestamp;
+  
   image_depth->header.frame_id = frame_id;
   image_depth->header.stamp    = timestamp;
   
@@ -383,6 +447,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   
   pub_camera_.publish( image, cinfo );
 //  pub_color_.publish( image_color, cinfo_color );
+  pub_bgr8_.publish( image_bgr8, cinfo_color );
   pub_color_.publish( image_rgb.toImageMsg(), cinfo_color );
   pub_depth_.publish( image_depth, cinfo_ir );
   pub_ir_.publish( image_ir, cinfo_ir );
