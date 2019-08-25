@@ -45,6 +45,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include <math.h>
+
 
 namespace cis_camera
 {
@@ -95,8 +97,8 @@ void CameraDriver::advertiseROSTopics()
   ros::NodeHandle color_nh( nh_, "rgb" );
   image_transport::ImageTransport color_it( color_nh );
   
-  ros::NodeHandle bgr8_nh( nh_, "bgr8" );
-  image_transport::ImageTransport bgr8_it( bgr8_nh );
+//  ros::NodeHandle bgr8_nh( nh_, "bgr8" );
+//  image_transport::ImageTransport bgr8_it( bgr8_nh );
   
   ros::NodeHandle depth_nh( nh_, "depth" );
   image_transport::ImageTransport depth_it( depth_nh );
@@ -107,7 +109,7 @@ void CameraDriver::advertiseROSTopics()
   // Advertise Camera Pubishers
   pub_camera_ = it_.advertiseCamera( "image_raw", 1, false );
   pub_color_  = color_it.advertiseCamera( "image_raw", 1, false );
-  pub_bgr8_   = bgr8_it.advertiseCamera( "image_raw", 1, false );
+//  pub_bgr8_   = bgr8_it.advertiseCamera( "image_raw", 1, false );
   pub_depth_  = depth_it.advertiseCamera( "image_raw", 1, false );
   pub_ir_     = ir_it.advertiseCamera( "image_raw", 1, false );
   
@@ -393,12 +395,29 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
 //    }
     
     // Convert Depth Data to [mm]
-    double depth_cnv_gain = 0.203308;
 //    double depth_cnv_gain = 0.406615;
+    double depth_cnv_gain = 0.203308;
+    int tof_err = getToFDepthCnvGain( depth_cnv_gain );
+    
     short  offset_val     = 0;
-    for ( int i=0; i< depth_height * depth_width; i++ )
+    
+//    for ( int i=0; i< depth_height * depth_width; i++ )
+//    {
+//      depth_data[i] = (uint16_t)( depth_data[i] * depth_cnv_gain * 4.0 + offset_val );
+//    }
+    
+    double depth_angle_width, p_1, i_d, j_d;
+    err = priv_nh_.getParam( "depth_angle_width", depth_angle_width );
+    double l_1 = depth_width / 2.0 / tan( M_PI / 180.0 * depth_angle_width );
+    
+    for ( int i=0; i< depth_height; i++ )
     {
-      depth_data[i] = (uint16_t)( depth_data[i] * depth_cnv_gain * 4.0 + offset_val );
+      i_d = i - depth_height / 2.0;
+      for ( int j=0; j < depth_width; j++ ) {
+        j_d = j - depth_width / 2.0;
+        p_1 = l_1 / sqrt( l_1 * l_1 + i_d * i_d + j_d * j_d );
+        depth_data[ i*depth_width + j ] = (uint16_t)( ( depth_data[ i*depth_width + j ] * depth_cnv_gain * 4.0 + offset_val ) * p_1 );
+      }
     }
     
     memcpy( &(image_depth->data[0]), depth_data, depth_width * depth_height * sizeof(uint16_t) );
@@ -447,8 +466,9 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   
   pub_camera_.publish( image, cinfo );
 //  pub_color_.publish( image_color, cinfo_color );
-  pub_bgr8_.publish( image_bgr8, cinfo_color );
-  pub_color_.publish( image_rgb.toImageMsg(), cinfo_color );
+//  pub_bgr8_.publish( image_bgr8, cinfo_color );
+  pub_color_.publish( image_bgr8, cinfo_color );
+//  pub_color_.publish( image_rgb.toImageMsg(), cinfo_color );
   pub_depth_.publish( image_depth, cinfo_ir );
   pub_ir_.publish( image_ir, cinfo_ir );
   

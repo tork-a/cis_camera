@@ -41,8 +41,8 @@
     <include file="$(find rgbd_launch)/launch/includes/processing.launch.xml">
       <arg name="manager" value="$(arg manager)" />
       <arg name="respawn" value="false" />
-      <arg name="rgb_processing" value="false" />
-      <arg name="ir_processing" value="false" />
+      <arg name="rgb_processing" value="true" />
+      <arg name="ir_processing" value="true" />
       <arg name="depth_processing" value="true" />
       <arg name="depth_registered_processing" value="false" />
       <arg name="disparity_processing" value="false" />
