@@ -50,7 +50,6 @@ private:
   
   // Accept a reconfigure request from a client
   void ReconfigureCallback( CISCameraConfig &config, uint32_t level );
-  enum uvc_frame_format GetVideoMode( std::string vmode );
   
   // Accept a new image frame from the camera
   void ImageCallback( uvc_frame_t *frame );
@@ -146,7 +145,6 @@ private:
   
   image_transport::ImageTransport  it_;
   image_transport::CameraPublisher pub_camera_;
-  image_transport::CameraPublisher pub_bgr8_;
   image_transport::CameraPublisher pub_color_;
   image_transport::CameraPublisher pub_depth_;
   image_transport::CameraPublisher pub_ir_;

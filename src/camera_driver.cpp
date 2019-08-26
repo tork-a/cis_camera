@@ -1,35 +1,5 @@
 /*********************************************************************
-* Software License Agreement (BSD License)
-*
-*  Copyright (C) 2012 Ken Tossell
-*  All rights reserved.
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions
-*  are met:
-*
-*   * Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*   * Redistributions in binary form must reproduce the above
-*     copyright notice, this list of conditions and the following
-*     disclaimer in the documentation and/or other materials provided
-*     with the distribution.
-*   * Neither the name of the author nor other contributors may be
-*     used to endorse or promote products derived from this software
-*     without specific prior written permission.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-*  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-*  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-*  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-*  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-*  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-*  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-*  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-*  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-*  POSSIBILITY OF SUCH DAMAGE.
+
 *********************************************************************/
 
 #include "cis_camera/camera_driver.h"
@@ -42,9 +12,6 @@
 #include <image_transport/camera_publisher.h>
 #include <dynamic_reconfigure/server.h>
 #include <libuvc/libuvc.h>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/imgproc/imgproc.hpp>
-
 #include <math.h>
 
 
@@ -97,9 +64,6 @@ void CameraDriver::advertiseROSTopics()
   ros::NodeHandle color_nh( nh_, "rgb" );
   image_transport::ImageTransport color_it( color_nh );
   
-//  ros::NodeHandle bgr8_nh( nh_, "bgr8" );
-//  image_transport::ImageTransport bgr8_it( bgr8_nh );
-  
   ros::NodeHandle depth_nh( nh_, "depth" );
   image_transport::ImageTransport depth_it( depth_nh );
   
@@ -109,7 +73,6 @@ void CameraDriver::advertiseROSTopics()
   // Advertise Camera Pubishers
   pub_camera_ = it_.advertiseCamera( "image_raw", 1, false );
   pub_color_  = color_it.advertiseCamera( "image_raw", 1, false );
-//  pub_bgr8_   = bgr8_it.advertiseCamera( "image_raw", 1, false );
   pub_depth_  = depth_it.advertiseCamera( "image_raw", 1, false );
   pub_ir_     = ir_it.advertiseCamera( "image_raw", 1, false );
   
@@ -248,8 +211,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   sensor_msgs::Image::Ptr image_depth( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_ir( new sensor_msgs::Image() );
   
-  cv_bridge::CvImage image_rgb;
-  
   std::string frame_id;
   err = priv_nh_.getParam( "frame_id",  frame_id );
   
@@ -284,28 +245,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     }
     
     memcpy( &(image_color->data[0]), color_data, color_width * color_height * sizeof(uint16_t) );
-    
-    // Converting YUV422 to BGR8 with OpenCV
-    cv_bridge::CvImagePtr cv_ptr_yuv;
-    try
-    {
-      cv_ptr_yuv = cv_bridge::toCvCopy( image_color, sensor_msgs::image_encodings::YUV422 );
-    }
-    catch ( cv_bridge::Exception& e )
-    {
-      ROS_ERROR( "cv_bridge exception: %s", e.what() );
-    }
-    cv::Mat mat_rgb;
-//    cv::cvtColor( cv_ptr_yuv->image, mat_rgb, cv::COLOR_YUV2RGB_UYVY );
-    cv::cvtColor( cv_ptr_yuv->image, mat_rgb, cv::COLOR_YUV2BGR_UYVY );
-    
-    image_rgb.image    = mat_rgb;
-    image_rgb.encoding = "bgr8";
-    
-    image_rgb.header          = image_color->header;
-    image_rgb.header.frame_id = frame_id;
-    image_rgb.header.stamp    = timestamp;
-    
     
     // Converting YUV422 to BGR8
     image_bgr8->encoding = "bgr8";
@@ -347,11 +286,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       bgr8_ptr += 6;
     }
     
-//    uint8_t* color_ptr = reinterpret_cast<uint8_t*>( &(color_data[0]) );
-//    memcpy( &(uyvy_data[0]), color_ptr, color_width * color_height * 2 * sizeof(uint8_t) );
-    
-//    memcpy( &(image_bgr8->data[0]), bgr8_data, color_width * color_height * 3 );
-    
     
     // Cropping Depth and IR Image Frame
     int depth_width  = 640;
@@ -387,15 +321,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       memcpy( &(ir_data[n]), &(data[m]), depth_width * sizeof(uint16_t) );
     }
     
-    // Ad-hoc: Change metric to mm
-//    uint16_t* data = reinterpret_cast<uint16_t*>(&image->data[0]);
-//    for ( int i=0; i<image->height*image->width; i++ )
-//    {
-//      data[i] = (uint16_t)(data[i]*0.406615*4.0);
-//    }
-    
     // Convert Depth Data to [mm]
-//    double depth_cnv_gain = 0.406615;
     double depth_cnv_gain = 0.203308;
     int tof_err = getToFDepthCnvGain( depth_cnv_gain );
     
@@ -406,9 +332,9 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
 //      depth_data[i] = (uint16_t)( depth_data[i] * depth_cnv_gain * 4.0 + offset_val );
 //    }
     
-    double depth_angle_width, p_1, i_d, j_d;
+    double depth_angle_width, p_1, i_d, j_d, l_1;
     err = priv_nh_.getParam( "depth_angle_width", depth_angle_width );
-    double l_1 = depth_width / 2.0 / tan( M_PI / 180.0 * depth_angle_width );
+    l_1 = depth_width / 2.0 / tan( M_PI / 180.0 * depth_angle_width );
     
     for ( int i=0; i< depth_height; i++ )
     {
@@ -426,14 +352,8 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   }
   else
   {
-    uvc_error_t conv_ret = uvc_any2bgr( frame, rgb_frame_ );
-    if ( conv_ret != UVC_SUCCESS )
-    {
-      ROS_ERROR( "Couldn't convert frame to RGB : Error.%d", conv_ret );
-      return;
-    }
-    image->encoding = "bgr8";
-    memcpy( &(image->data[0]), rgb_frame_->data, rgb_frame_->data_bytes );
+    ROS_ERROR( "Frame Format is not UVC_FRAME_FORMAT_GRAY16" );
+    return;
   }
   
   image->header.frame_id = frame_id;
@@ -465,10 +385,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   cinfo_color->header.stamp    = timestamp;
   
   pub_camera_.publish( image, cinfo );
-//  pub_color_.publish( image_color, cinfo_color );
-//  pub_bgr8_.publish( image_bgr8, cinfo_color );
   pub_color_.publish( image_bgr8, cinfo_color );
-//  pub_color_.publish( image_rgb.toImageMsg(), cinfo_color );
   pub_depth_.publish( image_depth, cinfo_ir );
   pub_ir_.publish( image_ir, cinfo_ir );
   
@@ -488,53 +405,6 @@ void CameraDriver::ImageCallbackAdapter( uvc_frame_t *frame, void *ptr )
   
   driver->ImageCallback( frame );
 }
-
-
-enum uvc_frame_format CameraDriver::GetVideoMode( std::string vmode )
-{
-  if( vmode == "uncompressed" )
-  {
-    return UVC_COLOR_FORMAT_UNCOMPRESSED;
-  }
-  else if ( vmode == "compressed" )
-  {
-    return UVC_COLOR_FORMAT_COMPRESSED;
-  }
-  else if ( vmode == "yuyv" )
-  {
-    return UVC_COLOR_FORMAT_YUYV;
-  }
-  else if ( vmode == "uyvy" )
-  {
-    return UVC_COLOR_FORMAT_UYVY;
-  }
-  else if ( vmode == "rgb" )
-  {
-    return UVC_COLOR_FORMAT_RGB;
-  }
-  else if ( vmode == "bgr" )
-  {
-    return UVC_COLOR_FORMAT_BGR;
-  }
-  else if ( vmode == "mjpeg" )
-  {
-    return UVC_COLOR_FORMAT_MJPEG;
-  }
-  else if ( vmode == "gray8" )
-  {
-    return UVC_COLOR_FORMAT_GRAY8;
-  }
-  else if ( vmode == "gray16" )
-  {
-    return UVC_COLOR_FORMAT_GRAY16;
-  }
-  else
-  {
-    ROS_ERROR_STREAM( "Invalid Video Mode: " << vmode );
-    ROS_WARN_STREAM( "Continue using video mode: uncompressed" );
-    return UVC_COLOR_FORMAT_UNCOMPRESSED;
-  }
-};
 
 
 void CameraDriver::OpenCamera()
@@ -606,24 +476,13 @@ void CameraDriver::OpenCamera()
     switch ( open_err )
     {
       case UVC_ERROR_ACCESS:
-#ifdef __linux__
         ROS_ERROR( "Permission denied opening /dev/bus/usb/%03d/%03d",
                     uvc_get_bus_number( dev_ ), uvc_get_device_address( dev_ ) );
-#else
-        ROS_ERROR( "Permission denied opening device %d on bus %d",
-                    uvc_get_device_address( dev_ ), uvc_get_bus_number( dev_ ) );
-#endif
         break;
       default:
-#ifdef __linux__
         ROS_ERROR( "Can't open /dev/bus/usb/%03d/%03d: %s (%d)",
                     uvc_get_bus_number( dev_ ), uvc_get_device_address( dev_ ),
                     uvc_strerror( open_err ), open_err );
-#else
-        ROS_ERROR( "Can't open device %d on bus %d: %s (%d)",
-                    uvc_get_device_address( dev_ ), uvc_get_bus_number( dev_ ),
-                    uvc_strerror( open_err ), open_err );
-#endif
         break;
     }
   
@@ -649,7 +508,7 @@ void CameraDriver::OpenCamera()
   uvc_error_t mode_err;
   mode_err = uvc_get_stream_ctrl_format_size(
       devh_, &ctrl,
-      GetVideoMode( video_mode ),
+      UVC_COLOR_FORMAT_GRAY16,
       frame_width, frame_height,
       frame_rate );
   
