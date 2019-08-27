@@ -1,5 +1,7 @@
 # Quick Start
 
+For CIS ToF Camera Sensor - Prototype May 2019
+
 ## System Configurations
 
 - Ubuntu 16.04
@@ -7,12 +9,14 @@
 - Ubuntu 18.04
     - ROS Melodic
 - USB 3.0 Port
+- CIS ToF Camera Sensor
+    - Prototype of May 2019
 
 ## Installation
 
 ### Installing ROS
 
-Install ROS Desktop Full on Ubuntu PC.
+Install "ROS Desktop Full" on Ubuntu PC.
 
 - ROS Kinetic for Ubuntu 16.04
     - http://wiki.ros.org/kinetic/Installation/Ubuntu
@@ -29,6 +33,8 @@ $ catkin_init_workspace
 ```
 
 - **NOTE:** Replase `$ROS_DISTRO` to the ROS distribution of your system, `kinetic` or `melodic`.
+
+<div style="page-break-before:always"></div>
 
 ### ToF Camera ROS Driver Software Codes
 
@@ -47,7 +53,8 @@ $ source ~/camera_ws/devel/setup.bash
 
 ## Connecting Camera
 
-Please connect the camera to the USB 3.0 port of your Ubuntu PC.
+1. Connect the camera to the USB 3.0 port of your Ubuntu PC
+1. Connect the external power source to the camera and turn it on
 
 ## Launching Software
 
@@ -62,25 +69,19 @@ $ roslaunch cis_camera pointcloud.launch
 
 #### NOTICE
 
-At the first launch, you will get a device permission error like below.
+At the first launch, you may get a device permission error like below.
 
 ```
-$ source ~/camera_ws/devel/setup.bash
 $ roslaunch cis_camera pointcloud.launch
-
 ...
 
 [ERROR] [1553240805.160155192]: Permission denied opening /dev/bus/usb/002/018
-
 ...
-
 ```
 
-The port number of the device is different every time,
-please replace it each time.
-
 Change the permission of the port displayed in the error by the following method,
-and execute the launch file again.
+and execute the launch file again. (The port number of the device is different every time,
+please replace it each time.)
 
 ```
 $ sudo chmod o+w /dev/bus/usb/002/018
@@ -105,6 +106,8 @@ $ source ~/camera_ws/devel/setup.bash
 $ rqt
 ```
 
+<div style="page-break-before:always"></div>
+
 ### Dynamic Reconfigure
 
 After you launched `pointcloud.launch` or `tof.launch`, 
@@ -112,7 +115,7 @@ you can reconfigure Depth/IR configurations dynamically with `rqt_reconfigure`.
 
 ```
 $ source ~/camera_ws/devel/setup.bash
-$ rosrun rqt_reconfigure rqtreconfigure
+$ rosrun rqt_reconfigure rqt_reconfigure
 ```
 
 ![Dynamic Reconfigure](images/cistof_dynamic_reconfigure.png)
@@ -123,3 +126,4 @@ $ rosrun rqt_reconfigure rqtreconfigure
 Enter `Ctrl-C` on the running terminal.
 
 <!-- EOF  -->
+
