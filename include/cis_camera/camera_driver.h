@@ -96,8 +96,8 @@ private:
     TOF_EEPROM_UPDATE_CURRENT   = 0x0001,
   };
   
-  int setToFCtrl( uint16_t *data ,int len );
-  int getToFCtrl( uint16_t *data ,int len );
+  int setCameraCtrl( uint8_t unit, uint16_t *data ,int len );
+  int getCameraCtrl( uint8_t unit, uint16_t *data ,int len );
   
   int setToFMode_ROSParameter( std::string param_name, int param );
   int setToFEEPROMMode( uint16_t mode );

@@ -443,7 +443,7 @@ void CameraDriver::OpenCamera()
   
   if ( find_err != UVC_SUCCESS )
   {
-    ROS_ERROR( "uvc_find_device" );
+    ROS_ERROR( "uvc_find_device : Error Num = %d", find_err );
     return;
   }
   
@@ -563,11 +563,11 @@ void CameraDriver::OpenCamera()
 }
 
 
-int CameraDriver::setToFCtrl( uint16_t *data ,int size )
+int CameraDriver::setCameraCtrl( uint8_t unit, uint16_t *data ,int size )
 {
   int err;
   
-  err = uvc_set_ctrl( devh_, 3, 0x03, data, size );
+  err = uvc_set_ctrl( devh_, unit, 0x03, data, size );
   if ( err != size )
   {
     ROS_ERROR( "Set Ctrl failed. Error: %d", err );
@@ -576,11 +576,11 @@ int CameraDriver::setToFCtrl( uint16_t *data ,int size )
 }
 
 
-int CameraDriver::getToFCtrl( uint16_t *data, int size )
+int CameraDriver::getCameraCtrl( uint8_t unit, uint16_t *data, int size )
 {
   int err;
   
-  err = setToFCtrl( data, size );
+  err = setCameraCtrl( unit, data, size );
   if ( err != size )
   {
     ROS_ERROR( "Set Ctrl to Get failed : Error: %d", err );
@@ -588,7 +588,7 @@ int CameraDriver::getToFCtrl( uint16_t *data, int size )
   }
   else
   {
-    err = uvc_get_ctrl( devh_, 3, 0x03, data, size, UVC_GET_CUR );
+    err = uvc_get_ctrl( devh_, unit, 0x03, data, size, UVC_GET_CUR );
     if ( err != size )
     {
       ROS_ERROR( "Get Ctrl failed. Error: %d", err );
@@ -644,6 +644,8 @@ int CameraDriver::setToFMode_All()
 
 int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0 )
 {
+  uint8_t unit = UVC_EXT_UNIT_TOF;
+  
   uint16_t send[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
   uint16_t recv[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
   
@@ -754,7 +756,7 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
   }
   
   // Set Parameter on TOF Camera
-  err = setToFCtrl( send, sizeof(send) );
+  err = setCameraCtrl( unit, send, sizeof(send) );
   if ( err == sizeof(send) )
   {
     ROS_INFO( "Set Parameter %s as { %d, %d, %d, %d } on TOF Camera",
@@ -767,7 +769,7 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
   }
   
   // Get Parameter on TOF Camera for Check
-//  err = getToFCtrl( recv, sizeof(recv) );
+//  err = getCameraCtrl( unit, recv, sizeof(recv) );
 //  if ( err == sizeof(recv) )
 //  {
 //    ROS_INFO( "Get Parameter %s as { %d, %d, %d, %d } on TOF Camera",
@@ -785,6 +787,7 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
 
 int CameraDriver::setToFEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t send[5] = { TOF_SET_EEPROM, 0, 0, 0, 0 };
   int err;
   
@@ -796,7 +799,7 @@ int CameraDriver::setToFEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT )
   else if ( val_max < mode ) send[1] = val_max;
   else                       send[1] = mode;
   
-  err = setToFCtrl( send, sizeof(send) );
+  err = setCameraCtrl( unit, send, sizeof(send) );
   if ( err == sizeof(send) )
   {
     ROS_INFO( "Set EEPROM Mode : %d", send[1] );
@@ -813,10 +816,11 @@ int CameraDriver::setToFEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT )
 
 int CameraDriver::clearToFError()
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t send[5] = { TOF_SET_ERROR_CLEAR, 0, 0, 0, 0 };
   int err;
   
-  err = setToFCtrl( send, sizeof(send) );
+  err = setCameraCtrl( unit, send, sizeof(send) );
   if ( err == sizeof(send) )
   {
     ROS_INFO( "Clear TOF Camera Errors" );
@@ -898,10 +902,11 @@ void CameraDriver::getToFInfo_All()
 
 int CameraDriver::getToFDepthIR( uint16_t& depth_ir )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     depth_ir = data[1];
@@ -918,10 +923,11 @@ int CameraDriver::getToFDepthIR( uint16_t& depth_ir )
 
 int CameraDriver::getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_DEPTH_RANGE, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     depth_range = data[1];
@@ -939,10 +945,11 @@ int CameraDriver::getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index )
 
 int CameraDriver::getToFThreshold( uint16_t& threshold )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_THRESHOLD, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     threshold = data[1];
@@ -959,10 +966,11 @@ int CameraDriver::getToFThreshold( uint16_t& threshold )
 
 int CameraDriver::getToFNRFilter( uint16_t& nr_filter )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_NR_FILTER, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     nr_filter = data[1];
@@ -979,10 +987,11 @@ int CameraDriver::getToFNRFilter( uint16_t& nr_filter )
 
 int CameraDriver::getToFPulseCount( uint16_t& pulse_count )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_PULSE_COUNT, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     pulse_count = data[1];
@@ -999,10 +1008,11 @@ int CameraDriver::getToFPulseCount( uint16_t& pulse_count )
 
 int CameraDriver::getToFLDEnable( uint16_t& ld_enable )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_LD_ENABLE, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     ld_enable = data[1];
@@ -1019,10 +1029,11 @@ int CameraDriver::getToFLDEnable( uint16_t& ld_enable )
 
 int CameraDriver::getToFDepthCnvGain( double& depth_cnv_gain )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_DEPTH_CNV_GAIN, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     depth_cnv_gain = *(double*)(&data[1]);
@@ -1042,10 +1053,11 @@ int CameraDriver::getToFDepthInfo( short&          offset_val,
                                    unsigned short& min_dist,
                                    unsigned short& max_dist )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_DEPTH_INFO, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     offset_val = *(short*)(&data[1]);
@@ -1066,10 +1078,11 @@ int CameraDriver::getToFDepthInfo( short&          offset_val,
 
 int CameraDriver::getToFIRGain( uint16_t& ir_gain )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_IR_GAIN, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     ir_gain = data[1];
@@ -1086,10 +1099,11 @@ int CameraDriver::getToFIRGain( uint16_t& ir_gain )
 
 int CameraDriver::getToFTemperature( double& t1, double& t2 )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_TEMPERATURE, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     t1 = data[1] / 256.0;
@@ -1107,10 +1121,11 @@ int CameraDriver::getToFTemperature( double& t1, double& t2 )
 
 int CameraDriver::getToFErrorStop( uint16_t& error_stop )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_ERROR_STOP, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     error_stop = data[1];
@@ -1130,10 +1145,11 @@ int CameraDriver::getToFVersion( uint16_t& version_n,
                                  uint16_t& build_y,
                                  uint16_t& build_d )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_VERSION, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     version_n = data[1];
@@ -1157,10 +1173,11 @@ int CameraDriver::getToFErrorInfo( uint16_t& common_err,
                                    uint16_t& eeprom_err,
                                    uint16_t& mipi_temp_err )
 {
+  uint8_t  unit    = UVC_EXT_UNIT_TOF;
   uint16_t data[5] = { TOF_GET_ERROR_INFO, 0, 0, 0, 0 };
   int err;
   
-  err = getToFCtrl( data, sizeof(data) );
+  err = getCameraCtrl( unit, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
     common_err          = data[1];
