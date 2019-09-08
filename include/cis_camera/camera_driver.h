@@ -27,6 +27,7 @@ public:
   
   int  setToFMode_All();
   void getToFInfo_All();
+  void getRGBInfo_All();
   
   
 private:
@@ -60,7 +61,7 @@ private:
   enum uvc_extention_unit_id
   {
     UVC_EXT_UNIT_TOF = 3,
-    UVC_EXT_UNIT_RGB = 9
+    UVC_EXT_UNIT_RGB = 9,
   };
   
   enum tof_process_num
@@ -96,6 +97,15 @@ private:
     TOF_EEPROM_UPDATE_CURRENT   = 0x0001,
   };
   
+  enum rgb_process_num
+  {
+    RGB_SET_AE_MODE          = 0x0001,
+    RGB_GET_AE_MODE          = 0x8001,
+    RGB_GET_BRIGHTNESS_GAIN  = 0x8002,
+    RGB_GET_SHUTTER_CONTROL  = 0x8003,
+    RGB_GET_COLOR_CORRECTION = 0x8005,
+  };
+  
   int setCameraCtrl( uint8_t unit, uint16_t *data ,int len );
   int getCameraCtrl( uint8_t unit, uint16_t *data ,int len );
   
@@ -125,6 +135,8 @@ private:
                        uint16_t& eeprom_err_factory,
                        uint16_t& eeprom_err,
                        uint16_t& mipi_temp_err );
+  
+  int getRGBAEMode( uint16_t& ae_mode );
   
   void publishToFTemperature( std::string frame_id );
   
