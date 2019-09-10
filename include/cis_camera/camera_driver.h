@@ -58,10 +58,10 @@ private:
   
   
   // TOF Camera
-  enum uvc_extention_unit_id
+  enum uvc_extention_unit_control_number
   {
-    UVC_EXT_UNIT_TOF = 3,
-    UVC_EXT_UNIT_RGB = 9,
+    UVC_XU_CTRL_TOF = 3,
+    UVC_XU_CTRL_RGB = 9,
   };
   
   enum tof_process_num
@@ -100,14 +100,17 @@ private:
   enum rgb_process_num
   {
     RGB_SET_AE_MODE          = 0x0001,
+    RGB_SET_BRIGHTNESS_GAIN  = 0x0002,
+    RGB_SET_SHUTTER_CONTROL  = 0x0003,
+    RGB_SET_COLOR_CORRECTION = 0x0005,
     RGB_GET_AE_MODE          = 0x8001,
     RGB_GET_BRIGHTNESS_GAIN  = 0x8002,
     RGB_GET_SHUTTER_CONTROL  = 0x8003,
     RGB_GET_COLOR_CORRECTION = 0x8005,
   };
   
-  int setCameraCtrl( uint8_t unit, uint16_t *data ,int len );
-  int getCameraCtrl( uint8_t unit, uint16_t *data ,int len );
+  int setCameraCtrl( uint8_t unit, uint16_t *data, int len );
+  int getCameraCtrl( uint8_t unit, uint16_t *data, int len );
   
   int setToFMode_ROSParameter( std::string param_name, int param );
   int setToFEEPROMMode( uint16_t mode );
@@ -136,7 +139,13 @@ private:
                        uint16_t& eeprom_err,
                        uint16_t& mipi_temp_err );
   
+  int setRGBAEMode();
+  int setRGBColorCorrection();
+  
   int getRGBAEMode( uint16_t& ae_mode );
+  int getRGBBrightnessGain( double& brightness_gain, double& brightness_maxg );
+  int getRGBShutterControl( double& exposure_time );
+  int getRGBColorCorrection( uint16_t& color_correction );
   
   void publishToFTemperature( std::string frame_id );
   
