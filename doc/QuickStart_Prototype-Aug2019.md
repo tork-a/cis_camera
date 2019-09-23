@@ -123,7 +123,7 @@ $ rqt
 ### Dynamic Reconfigure
 
 After you launched `pointcloud.launch reconfigure:=false` or `tof.launch`, 
-you can reconfigure Depth/IR configurations dynamically with `rqt_reconfigure`.
+you can also reconfigure Depth/IR configurations dynamically with launching `rqt_reconfigure`.
 
 ```
 $ source ~/camera_ws/devel/setup.bash
@@ -133,7 +133,7 @@ $ rosrun rqt_reconfigure rqt_reconfigure
 When you reconfigure Depth/IR camera distortion correction parameters,
 check `ir_dist_reconfig` to effect parameters `ir_fx`, `ir_fy` and so on.
 
-To set back the parameters to `config/camera_depth.yaml` data, 
+To set back the parameters to `config/camera_ir.yaml` data, 
 uncheck `ir_dist_reconfig`.
 
 <img src="images/ros_cis_camera_rqt_reconfigure_check-ir_dist_reconfig_20190923.png" style="width: 50%;" />
