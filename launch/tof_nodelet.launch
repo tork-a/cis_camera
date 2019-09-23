@@ -1,61 +1,81 @@
 <launch>
   
-  <arg name="camera" default="camera" />
+  <arg name="camera"        default="camera" />
+  <arg name="manager_name"  default="manager" />
+  
+  <!-- Arguments for camera parameters -->
+  <arg name="depth_range" default="0" />
+  <arg name="threshold"   default="0" />
+  <arg name="nr_filter"   default="1" />
+  <arg name="pulse_count" default="1200" />
+  <arg name="ld_enable"   default="3" />
+  <arg name="ir_gain"     default="256" />
+  
+  <!-- RGB Camera Arguments -->
+  <arg name="ae_mode"          default="3" />
+  <arg name="brightness_gain"  default="1.0" />
+  <arg name="exposure_time"    default="0.01" />
+  <arg name="color_correction" default="0" />
+  
+  <arg name="r_gain" default="1.0" />
+  <arg name="g_gain" default="1.0" />
+  <arg name="b_gain" default="1.0" />
   
   <group ns="$(arg camera)">
-  
-    <arg name="manager_name"  default="manager" />
     
     <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager" output="screen" />
-    
-    <!-- Arguments for camera parameters -->
-    <arg name="depth_ir"    default="0" />
-    <arg name="depth_range" default="0" />
-    <arg name="threshold"   default="0" />
-    <arg name="nr_filter"   default="1" />
-    <arg name="pulse_count" default="500" />
-    <arg name="ld_enable"   default="3" />
-    <arg name="ir_gain"     default="256" />
-    <arg name="error_stop"  default="1" />
     
     <node pkg="nodelet" type="nodelet" name="cistof_nodelet" 
           args="load cis_camera/cis_camera_nodelet $(arg manager_name)" 
           output="screen" >
       
       <!-- Parameters used to find the camera -->
-<!--
-      <param name="vendor"  value="0x04ec" />
-      <param name="product" value="0x2a00" />
--->
       <param name="vendor"  value="0x2af2" />
       <param name="product" value="0x0101" />
       <param name="serial"  value="" />
       <param name="index"   value="0" />
       
-      <param name="depth_ir"    value="$(arg depth_ir)" />
+      <!-- Depth/IR Camera Parameters-->
       <param name="depth_range" value="$(arg depth_range)" />
       <param name="threshold"   value="$(arg threshold)" />
       <param name="nr_filter"   value="$(arg nr_filter)" />
       <param name="pulse_count" value="$(arg pulse_count)" />
       <param name="ld_enable"   value="$(arg ld_enable)" />
       <param name="ir_gain"     value="$(arg ir_gain)" />
-      <param name="error_stop"  value="$(arg error_stop)" />
       
-      <!-- Image size and type -->
-      <param name="width"       value="1920" />
-      <param name="height"      value="960" />
-      <param name="video_mode"  value="gray16" />
-      <param name="frame_rate"  value="30" />
-      <param name="frame_id"    value="camera" />
+      <!-- RGB Camera Parameters-->
+      <param name="ae_mode"          value="$(arg ae_mode)" />
+      <param name="brightness_gain"  value="$(arg brightness_gain)" />
+      <param name="exposure_time"    value="$(arg exposure_time)" />
+      <param name="color_correction" value="$(arg color_correction)" />
       
-      <param name="timestamp_method" value="start" />
+      <param name="r_gain" value="$(arg r_gain)" />
+      <param name="g_gain" value="$(arg g_gain)" />
+      <param name="b_gain" value="$(arg b_gain)" />
+      
+      <!-- Image Sizes and Types -->
+      <param name="width"          value="1920" />
+      <param name="height"         value="960" />
+      <param name="color_width"    value="1280" />
+      <param name="frame_rate"     value="30" />
+      
+      <param name="frame_id"       value="camera"  />
+      <param name="frame_id_depth" value="camera_depth" />
+      <param name="frame_id_color" value="camera_color" />
+      
+      <param name="timestamp_method"      value="start" />
       <param name="camera_info_url"       value="file:///$(find cis_camera)/config/camera.yaml" />
       <param name="camera_info_url_color" value="file:///$(find cis_camera)/config/camera_color.yaml" />
-      <param name="camera_info_url_ir"    value="file:///$(find cis_camera)/config/camera_ir.yaml" />
+      <param name="camera_info_url_ir" value="file:///$(find cis_camera)/config/camera_ir.yaml" />
       
-      <!-- <param name="auto_exposure" value="3"/>  --><!-- use aperture_priority auto exposure -->
-      <!-- <param name="auto_white_balance" value="false"/> -->
     </node>
+    
+    <node name="camera_base_to_camera" pkg="tf" type="static_transform_publisher"
+          args="0 0 0.0317 0 0 0 camera_base camera 100" />
+    <node name="camera_to_camera_depth" pkg="tf" type="static_transform_publisher"
+          args="0.0088 -0.0110 0.0 -1.5708 0 -1.5708 camera camera_depth 100" />
+    <node name="camera_to_camera_color" pkg="tf" type="static_transform_publisher"
+          args="0.0201  0.0155 0.0 -1.5708 0 -1.5708 camera camera_color 100" />
     
   </group>
   

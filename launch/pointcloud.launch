@@ -1,36 +1,54 @@
 <launch>
   
   <arg name="rviz" default="true" />
+  <arg name="reconfigure" default="true" />
+  
   <arg name="camera" default="camera" />
   <arg name="num_worker_threads" default="4" />
   
-  <arg name="depth_ir"    default="0" />
   <arg name="depth_range" default="0" />
   <arg name="threshold"   default="0" />
   <arg name="nr_filter"   default="1" />
-  <arg name="pulse_count" default="500" />
+  <arg name="pulse_count" default="1200" />
   <arg name="ld_enable"   default="3" />
   <arg name="ir_gain"     default="256" />
-  <arg name="error_stop"  default="0" />
   
-  <node name="map_to_camera" pkg="tf" type="static_transform_publisher"
-        args="0 0 1.0 1.57 0 -1.57 map camera 100" />
+  <!-- RGB Camera Arguments -->
+  <arg name="ae_mode"          default="3" />
+  <arg name="brightness_gain"  default="1.0" />
+  <arg name="exposure_time"    default="0.01" />
+  <arg name="color_correction" default="0" />
+  
+  <arg name="r_gain" default="1.0" />
+  <arg name="g_gain" default="1.0" />
+  <arg name="b_gain" default="1.0" />
   
   <!-- TOF camera launch -->
   <include file="$(find cis_camera)/launch/tof.launch" >
-    <arg name="depth_ir"    value="$(arg depth_ir)" />
+    
+    <!-- Depth/IR Camera Parameters-->
     <arg name="depth_range" value="$(arg depth_range)" />
     <arg name="threshold"   value="$(arg threshold)" />
     <arg name="nr_filter"   value="$(arg nr_filter)" />
     <arg name="pulse_count" value="$(arg pulse_count)" />
     <arg name="ld_enable"   value="$(arg ld_enable)" />
     <arg name="ir_gain"     value="$(arg ir_gain)" />
-    <arg name="error_stop"  value="$(arg error_stop)" />
+    
+    <!-- RGB Camera Parameters-->
+    <arg name="ae_mode"          value="$(arg ae_mode)" />
+    <arg name="brightness_gain"  value="$(arg brightness_gain)" />
+    <arg name="exposure_time"    value="$(arg exposure_time)" />
+    <arg name="color_correction" value="$(arg color_correction)" />
+    
+    <arg name="r_gain" value="$(arg r_gain)" />
+    <arg name="g_gain" value="$(arg g_gain)" />
+    <arg name="b_gain" value="$(arg b_gain)" />
+    
   </include>
   
   <group ns="$(arg camera)">
     <arg name="manager" value="$(arg camera)_nodelet_manager"/>
-    <arg name="debug"   default="false" /> <!-- Run manager in GDB? -->
+    <arg name="debug"   default="false" />
     
     <include file="$(find rgbd_launch)/launch/includes/manager.launch.xml">
       <arg name="name"                value="$(arg manager)" />
@@ -50,11 +68,19 @@
       <arg name="hw_registered_processing" value="false" />
       <arg name="sw_registered_processing" value="false" />
     </include>
+    
   </group>
   
-  <!-- rviz -->
+  <node name="map_to_camera_base" pkg="tf" type="static_transform_publisher"
+        args="0 0 1.0 0 0 0 map camera_base 100" />
+  
+  <!-- RViz -->
   <node if="$(arg rviz)"
         name="rviz" pkg="rviz" type="rviz"
         args="-d $(find cis_camera)/launch/pointcloud.rviz"/>
+  
+  <!-- Dynamic Reconfigure-->
+  <node if="$(arg reconfigure)"
+        name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" />
   
 </launch>

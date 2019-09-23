@@ -56,8 +56,6 @@ private:
   void ImageCallback( uvc_frame_t *frame );
   static void ImageCallbackAdapter( uvc_frame_t *frame, void *ptr );
   
-  
-  // TOF Camera
   enum uvc_extention_unit_control_number
   {
     UVC_XU_CTRL_TOF = 3,
@@ -67,7 +65,6 @@ private:
   enum tof_process_num
   {
     TOF_SET_EEPROM          = 0x0000,
-    TOF_SET_DEPTH_IR        = 0x0001,
     TOF_SET_DEPTH_RANGE     = 0x0002,
     TOF_SET_THRESHOLD       = 0x0003,
     TOF_SET_NR_FILTER       = 0x0004,
@@ -86,7 +83,7 @@ private:
     TOF_GET_DEPTH_INFO      = 0x8008,
     TOF_GET_IR_GAIN         = 0x8009,
     TOF_GET_TEMPERATURE     = 0x800A,
-    TOF_GET_ERROR_STOP      = 0x8010,
+    TOF_GET_LD_PULSE_WIDTH  = 0x800B,
     TOF_GET_VERSION         = 0xFF00,
     TOF_GET_ERROR_INFO      = 0xFF01,
   };
@@ -112,7 +109,8 @@ private:
   int setCameraCtrl( uint8_t unit, uint16_t *data, int len );
   int getCameraCtrl( uint8_t unit, uint16_t *data, int len );
   
-  int setToFMode_ROSParameter( std::string param_name, int param );
+  int setToFMode_ROSParameter( std::string param_name, double param );
+  int setToFMode_ROSParameter( std::string param_name, int    param );
   int setToFEEPROMMode( uint16_t mode );
   int clearToFError();
   
@@ -121,15 +119,15 @@ private:
   int getToFThreshold( uint16_t& threshold );
   int getToFNRFilter( uint16_t& nr_filter );
   int getToFPulseCount( uint16_t& pulse_count );
-  int getToFLDEnable( uint16_t& ld_enable );
+  int getToFLDEnable( uint16_t& ld_enable_near, uint16_t& ld_enable_wide );
   int getToFDepthCnvGain( double& depth_cnv_gain );
-  int getToFDepthInfo( short&          offset_val,
+  int getToFDepthInfo( short&      depth_offset,
                        unsigned short& max_data,
                        unsigned short& min_dist,
                        unsigned short& max_dist );
   int getToFIRGain( uint16_t& ir_gain );
   int getToFTemperature( double& t1, double& t2 );
-  int getToFErrorStop( uint16_t& error_stop );
+  int getToFLDPulseWidth( int& time_near, int& time_wide );
   int getToFVersion( uint16_t& version_n,
                      uint16_t& build_n,
                      uint16_t& build_y,
@@ -147,12 +145,13 @@ private:
   int getRGBShutterControl( double& exposure_time );
   int getRGBColorCorrection( uint16_t& color_correction );
   
-  void publishToFTemperature( std::string frame_id );
+  void publishToFTemperature();
   
   ros::Publisher pub_tof_t1_;
   ros::Publisher pub_tof_t2_;
   
-  // END TOF Camera
+  double depth_cnv_gain_;
+  short  depth_offset_;
   
   ros::NodeHandle nh_, priv_nh_;
   
@@ -182,6 +181,8 @@ private:
   std::string camera_info_url_;
   std::string camera_info_url_ir_;
   std::string camera_info_url_color_;
+  
+  double r_gain_, g_gain_, b_gain_;
   
 };
 

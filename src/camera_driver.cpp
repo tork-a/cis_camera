@@ -117,8 +117,6 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
 {
   boost::recursive_mutex::scoped_lock( mutex_ );
   
-  ROS_INFO( "Reconfigure Request" );
-  
   if ( (level & ReconfigureClose) == ReconfigureClose )
   {
     if ( state_ == Running )
@@ -161,8 +159,42 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
     {
       setToFMode_ROSParameter( "ir_gain", new_config.ir_gain );
     }
+    
+    if ( new_config.ae_mode != config_.ae_mode )
+    {
+      setToFMode_ROSParameter( "ae_mode", new_config.ae_mode );
+    }
+    
+    if ( new_config.brightness_gain != config_.brightness_gain )
+    {
+      setToFMode_ROSParameter( "brightness_gain", new_config.brightness_gain );
+    }
+    
+    if ( new_config.exposure_time != config_.exposure_time )
+    {
+      setToFMode_ROSParameter( "exposure_time", new_config.exposure_time );
+    }
+    
+    if ( new_config.color_correction != config_.color_correction )
+    {
+      setToFMode_ROSParameter( "color_correction", new_config.color_correction );
+    }
+    
+    if ( new_config.r_gain != config_.r_gain )
+    {
+      r_gain_ = new_config.r_gain;
+    }
+    if ( new_config.g_gain != config_.g_gain )
+    {
+      g_gain_ = new_config.g_gain;
+    }
+    if ( new_config.b_gain != config_.b_gain )
+    {
+      b_gain_ = new_config.b_gain;
+    }
   }
   
+  config_changed_ = true;
   config_ = new_config;
   return;
 }
@@ -191,14 +223,31 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     return;
   }
   
-  int         err;
-  int         frame_width;
-  int         frame_height;
-  double      frame_rate;
-  std::string video_mode;
+  if ( config_changed_ )
+  {
+    getToFDepthCnvGain( depth_cnv_gain_ );
+    
+    unsigned short max_data;
+    unsigned short min_dist;
+    unsigned short max_dist;
+    getToFDepthInfo( depth_offset_, max_data, min_dist, max_dist );
+    
+    config_server_.updateConfig( config_ );
+    config_changed_ = false;
+    
+    // Return to aquire a new image
+    return;
+  }
   
-  err = priv_nh_.getParam( "width",  frame_width  );
-  err = priv_nh_.getParam( "height", frame_height );
+  int    err;
+  int    frame_width  = 1920;
+  int    frame_height = 960;
+  int    color_width  = 1280;
+  double frame_rate   = 30.0;
+  
+  err = priv_nh_.getParam( "width"      , frame_width  );
+  err = priv_nh_.getParam( "height"     , frame_height );
+  err = priv_nh_.getParam( "color_width", color_width  );
   
   sensor_msgs::Image::Ptr image( new sensor_msgs::Image() );
   image->width  = frame_width;
@@ -207,7 +256,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   image->data.resize( image->step * image->height );
   
   sensor_msgs::Image::Ptr image_bgr8( new sensor_msgs::Image() );
-  sensor_msgs::Image::Ptr image_color( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_depth( new sensor_msgs::Image() );
   sensor_msgs::Image::Ptr image_ir( new sensor_msgs::Image() );
   
@@ -216,7 +264,11 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   sensor_msgs::CameraInfo::Ptr cinfo_color( new sensor_msgs::CameraInfo( cinfo_manager_color_.getCameraInfo() ) );
   
   std::string frame_id;
-  err = priv_nh_.getParam( "frame_id",  frame_id );
+  std::string frame_id_depth;
+  std::string frame_id_color;
+  err = priv_nh_.getParam( "frame_id"      ,  frame_id       );
+  err = priv_nh_.getParam( "frame_id_depth",  frame_id_depth );
+  err = priv_nh_.getParam( "frame_id_color",  frame_id_color );
   
   if ( frame->frame_format == UVC_FRAME_FORMAT_GRAY16 )
   {
@@ -228,14 +280,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     uint16_t* data = reinterpret_cast<uint16_t*>( &image->data[0] );
     
     // Cropping Color Image Frame
-    int color_width  = 1280;
-    int color_height = 960;
-    
-    image_color->encoding = "yuv422";
-    image_color->width  = color_width;
-    image_color->height = color_height;
-    image_color->step   = image_color->width * 2;
-    image_color->data.resize( image_color->step * image_color->height );
+    int color_height = frame_height;
     
     uint16_t color_data[ color_width * color_height ];
     
@@ -247,8 +292,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       n = i * color_width;
       memcpy( &(color_data[n]), &(data[m]), color_width * sizeof(uint16_t) );
     }
-    
-    memcpy( &(image_color->data[0]), color_data, color_width * color_height * sizeof(uint16_t) );
     
     // Converting YUV422 to BGR8
     image_bgr8->encoding = "bgr8";
@@ -269,7 +312,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     int half_pixels = color_width * color_height / 2;
     for ( int i = 0; i < half_pixels; i++ )
     {
-      u0 = static_cast<double>( *(uyvy_ptr) );
+      u0 = static_cast<double>( *(uyvy_ptr)   );
       y0 = static_cast<double>( *(uyvy_ptr+1) );
       v0 = static_cast<double>( *(uyvy_ptr+2) );
       y1 = static_cast<double>( *(uyvy_ptr+3) );
@@ -278,22 +321,21 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       g0 = 0.187324 * ( u0 - 128 ) - 0.468124 * ( v0 - 128 );
       b0 = 1.855600 * ( u0 - 128 );
       
-      *(bgr8_ptr)   = cvtDoubleToByte( y0 + b0 );
-      *(bgr8_ptr+1) = cvtDoubleToByte( y0 + g0 );
-      *(bgr8_ptr+2) = cvtDoubleToByte( y0 + r0 );
+      *(bgr8_ptr)   = cvtDoubleToByte( ( y0 + b0 ) * b_gain_ );
+      *(bgr8_ptr+1) = cvtDoubleToByte( ( y0 + g0 ) * g_gain_ );
+      *(bgr8_ptr+2) = cvtDoubleToByte( ( y0 + r0 ) * r_gain_ );
       
-      *(bgr8_ptr+3) = cvtDoubleToByte( y1 + b0 );
-      *(bgr8_ptr+4) = cvtDoubleToByte( y1 + g0 );
-      *(bgr8_ptr+5) = cvtDoubleToByte( y1 + r0 );
+      *(bgr8_ptr+3) = cvtDoubleToByte( ( y1 + b0 ) * b_gain_ );
+      *(bgr8_ptr+4) = cvtDoubleToByte( ( y1 + g0 ) * g_gain_ );
+      *(bgr8_ptr+5) = cvtDoubleToByte( ( y1 + r0 ) * r_gain_ );
       
       uyvy_ptr += 4;
       bgr8_ptr += 6;
     }
     
-    
     // Cropping Depth and IR Image Frame
-    int depth_width  = 640;
-    int depth_height = 480;
+    int depth_width  = frame_width - color_width;
+    int depth_height = frame_height / 2;
     
     image_depth->encoding = "16UC1";
     image_depth->width  = depth_width;
@@ -311,7 +353,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     
     uint16_t ir_data[ depth_width * depth_height ];
     
-    int offset_x = 1280;
+    int offset_x = color_width;
     int offset_y = 0;
     m = 0;
     n = 0;
@@ -325,79 +367,77 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       memcpy( &(ir_data[n]), &(data[m]), depth_width * sizeof(uint16_t) );
     }
     
-    // Convert Depth Data to [mm]
-    double depth_cnv_gain = 0.203308;
-    int tof_err;
-    tof_err = getToFDepthCnvGain( depth_cnv_gain );
-    
-    short          offset_val;
-    unsigned short max_data;
-    unsigned short min_dist;
-    unsigned short max_dist;
-    tof_err = getToFDepthInfo( offset_val, max_data, min_dist, max_dist );
-    
-#if 0
-    for ( int i=0; i< depth_height * depth_width; i++ )
-    {
-      depth_data[i] = (uint16_t)( depth_data[i] * depth_cnv_gain * 4.0 + offset_val );
-    }
-#endif
-    
-#if 0
-    double depth_angle_width, p_1, i_d, j_d, l_1;
-    err = priv_nh_.getParam( "depth_angle_width", depth_angle_width );
-    l_1 = depth_width / 2.0 / tan( M_PI / 180.0 * depth_angle_width );
-    
-    double cx = cinfo_ir->K[2];
-    double cy = cinfo_ir->K[5];
-    
-    for ( int i=0; i< depth_height; i++ )
-    {
-//      i_d = i - depth_height / 2.0;
-      i_d = i - cy;
-      for ( int j=0; j < depth_width; j++ ) {
-//        j_d = j - depth_width / 2.0;
-        j_d = j - cx;
-        p_1 = l_1 / sqrt( l_1 * l_1 + i_d * i_d + j_d * j_d );
-        depth_data[ i*depth_width + j ] = (uint16_t)( ( depth_data[ i*depth_width + j ] * depth_cnv_gain * 4.0 + offset_val ) * p_1 );
-      }
-    }
-#endif
-    
-#if 1
     // Depth Data Modification for Cartesian Coordinate System
-    double fx = cinfo_ir->K[0];
-    double fy = cinfo_ir->K[4];
-    double cx = cinfo_ir->K[2];
-    double cy = cinfo_ir->K[5];
-    double k1 = cinfo_ir->D[0];
-    double k2 = cinfo_ir->D[1];
-    double p1 = cinfo_ir->D[2];
-    double p2 = cinfo_ir->D[3];
+    double fx, fy, cx, cy;
+    double k1, k2, k3, p1, p2;
     
-    double xp, yp, xp2, yp2, r2, r4, k0, s0;
+    bool ir_dist_reconfig;
+    priv_nh_.getParam( "ir_dist_reconfig", ir_dist_reconfig );
+    if( ir_dist_reconfig )
+    {
+      priv_nh_.getParam( "ir_fx", fx );
+      priv_nh_.getParam( "ir_fy", fy );
+      priv_nh_.getParam( "ir_cx", cx );
+      priv_nh_.getParam( "ir_cy", cy );
+      priv_nh_.getParam( "ir_k1", k1 );
+      priv_nh_.getParam( "ir_k2", k2 );
+      priv_nh_.getParam( "ir_k3", k3 );
+      priv_nh_.getParam( "ir_p1", p1 );
+      priv_nh_.getParam( "ir_p2", p2 );
+      
+      cinfo_ir->K[0] = fx;
+      cinfo_ir->K[4] = fy;
+      cinfo_ir->K[2] = cx;
+      cinfo_ir->K[5] = cy;
+      cinfo_ir->D[0] = k1;
+      cinfo_ir->D[1] = k2;
+      cinfo_ir->D[2] = p1;
+      cinfo_ir->D[3] = p2;
+      cinfo_ir->D[4] = k3;
+    }
+    else
+    {
+      fx = cinfo_ir->K[0];
+      fy = cinfo_ir->K[4];
+      cx = cinfo_ir->K[2];
+      cy = cinfo_ir->K[5];
+      k1 = cinfo_ir->D[0];
+      k2 = cinfo_ir->D[1];
+      p1 = cinfo_ir->D[2];
+      p2 = cinfo_ir->D[3];
+    }
+    
+    double xp, yp, x2, y2, r2, r4, r6, k0, s0;
+    double xp_mod, yp_mod;
+    
+    uint16_t depth_data_max = 0;
     
     for ( int i=0; i< depth_height; i++ )
     {
       yp = ( i - cy ) / fy;
+      y2 = yp * yp;
       
       for ( int j=0; j < depth_width; j++ )
       {
         xp = ( j - cx ) / fx;
+        x2 = xp * xp;
+        
+        depth_data_max = depth_data[ i*depth_width + j ];
         
         // Lens Distortion Correction
-        r2  = xp * xp + yp * yp;
+        r2  = x2 + y2;
         r4  = r2 * r2;
-        k0  = 1.0 + k1 * r2 + k2 * r4;
-        xp2 = xp * k0 + 2.0 * p1 * xp * yp + p2 * ( r2 + 2.0 * xp * xp );
-        yp2 = yp * k0 + 2.0 * p2 * xp * yp + p1 * ( r2 + 2.0 * yp * yp );
+        r6  = r2 * r4;
+        k0  = 1.0 + k1 * r2 + k2 * r4 + k3 * r6;
+        xp_mod = xp * k0 + 2.0 * p1 * xp * yp + p2 * ( r2 + 2.0 * x2 );
+        yp_mod = yp * k0 + 2.0 * p2 * xp * yp + p1 * ( r2 + 2.0 * y2 );
         
-        s0 = sqrt( xp2 * xp2 + yp2 * yp2 + 1.0 );
+        s0 = sqrt( xp_mod * xp_mod + yp_mod * yp_mod + 1.0 );
         
-        depth_data[ i*depth_width + j ] = (uint16_t)( ( depth_data[ i*depth_width + j ] * depth_cnv_gain * 4.0 + offset_val ) / s0 );
+        depth_data[ i*depth_width + j ] = (uint16_t)( floor( ( depth_data[ i*depth_width + j ] * depth_cnv_gain_ * 4.0 + depth_offset_ ) / s0 + 0.5 ) );
+        
       }
     }
-#endif
     
     memcpy( &(image_depth->data[0]), depth_data, depth_width * depth_height * sizeof(uint16_t) );
     memcpy( &(image_ir->data[0]), ir_data, depth_width * depth_height * sizeof(uint16_t) );
@@ -405,32 +445,28 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   }
   else
   {
-    ROS_ERROR( "Frame Format is not UVC_FRAME_FORMAT_GRAY16" );
     return;
   }
   
   image->header.frame_id = frame_id;
   image->header.stamp    = timestamp;
   
-  image_color->header.frame_id = frame_id;
-  image_color->header.stamp    = timestamp;
-  
-  image_bgr8->header.frame_id = frame_id;
+  image_bgr8->header.frame_id = frame_id_color;
   image_bgr8->header.stamp    = timestamp;
   
-  image_depth->header.frame_id = frame_id;
+  image_depth->header.frame_id = frame_id_depth;
   image_depth->header.stamp    = timestamp;
   
-  image_ir->header.frame_id = frame_id;
+  image_ir->header.frame_id = frame_id_depth;
   image_ir->header.stamp    = timestamp;
   
   cinfo->header.frame_id = frame_id;
   cinfo->header.stamp    = timestamp;
   
-  cinfo_ir->header.frame_id = frame_id;
+  cinfo_ir->header.frame_id = frame_id_depth;
   cinfo_ir->header.stamp    = timestamp;
   
-  cinfo_color->header.frame_id = frame_id;
+  cinfo_color->header.frame_id = frame_id_color;
   cinfo_color->header.stamp    = timestamp;
   
   pub_camera_.publish( image, cinfo );
@@ -438,13 +474,9 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   pub_depth_.publish( image_depth, cinfo_ir );
   pub_ir_.publish( image_ir, cinfo_ir );
   
-  publishToFTemperature( frame_id );
+//  publishToFTemperature();
   
-  if ( config_changed_ )
-  {
-    config_server_.updateConfig( config_ );
-    config_changed_ = false;
-  }
+  return;
 }
 
 
@@ -522,15 +554,17 @@ void CameraDriver::OpenCamera()
   
   if ( open_err != UVC_SUCCESS )
   {
+    int bus_num = uvc_get_bus_number( dev_ );
+    int dev_adr = uvc_get_device_address( dev_ );
+    
     switch ( open_err )
     {
       case UVC_ERROR_ACCESS:
-        ROS_ERROR( "Permission denied opening /dev/bus/usb/%03d/%03d",
-                    uvc_get_bus_number( dev_ ), uvc_get_device_address( dev_ ) );
+        ROS_ERROR( "Permission denied opening /dev/bus/usb/%03d/%03d" , bus_num, dev_adr );
+        ROS_ERROR( "Please quit by 'Ctrl-C' and change the permission with 'sudo chmod o+x /dev/bus/usb/%03d/%03d'", bus_num, dev_adr );
         break;
       default:
-        ROS_ERROR( "Can't open /dev/bus/usb/%03d/%03d: %s (%d)",
-                    uvc_get_bus_number( dev_ ), uvc_get_device_address( dev_ ),
+        ROS_ERROR( "Can't open /dev/bus/usb/%03d/%03d: %s (%d)", bus_num, dev_adr, 
                     uvc_strerror( open_err ), open_err );
         break;
     }
@@ -543,9 +577,6 @@ void CameraDriver::OpenCamera()
   int         frame_height = 960;
   double      frame_rate   = 30.0;
   std::string video_mode   = "uncompressed";
-  
-  int         color_width  = 1280;
-  int         color_height = 960;
   
   err = priv_nh_.getParam( "width"  , frame_width  );
   err = priv_nh_.getParam( "height" , frame_height );
@@ -609,6 +640,10 @@ void CameraDriver::OpenCamera()
   
   tof_err = clearToFError();
   
+  err = priv_nh_.getParam( "r_gain", r_gain_ );
+  err = priv_nh_.getParam( "g_gain", g_gain_ );
+  err = priv_nh_.getParam( "b_gain", b_gain_ );
+  
   state_ = Running;
 }
 
@@ -617,7 +652,6 @@ int CameraDriver::setCameraCtrl( uint8_t ctrl, uint16_t *data ,int size )
 {
   int err;
   
-//  err = uvc_set_ctrl( devh_, ctrl, 0x03, data, size );
   err = uvc_set_ctrl( devh_, 3, ctrl, data, size );
   if ( err != size )
   {
@@ -655,16 +689,18 @@ int CameraDriver::setToFMode_All()
   int err;
   
 //  std::string rosparam_names[8] =
-  std::string rosparam_names[6] =
+  std::string rosparam_names[10] =
   {
-//    "depth_ir",
     "depth_range",
     "threshold",
     "nr_filter",
     "pulse_count",
     "ld_enable",
     "ir_gain",
-//    "error_stop"
+    "ae_mode",
+    "brightness_gain",
+    "exposure_time",
+    "color_correction"
   };
   std::string param_name;
   
@@ -674,7 +710,6 @@ int CameraDriver::setToFMode_All()
   for ( int i = 0; i < name_num ; i++ )
   {
     param_name = rosparam_names[i];
-    ROS_INFO( "%d. ROS Param : %s", i, param_name.c_str() );
 
     int err   = 0;
     
@@ -694,38 +729,48 @@ int CameraDriver::setToFMode_All()
 }
 
 
+int CameraDriver::setToFMode_ROSParameter( std::string param_name, double param = 0.0 )
+{
+  int err     = 0;
+  int param_i = 0;
+  
+  if ( param_name == "brightness_gain" )
+  {
+    param_i = floor( param * 100 );
+  }
+  else if ( param_name == "exposure_time" )
+  {
+    param_i = floor( param * 0x00100000 );
+  }
+  else
+  {
+    return err;
+  }
+  
+  err = setToFMode_ROSParameter( param_name, param_i );
+  return err;
+}
+
 int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0 )
 {
   uint8_t ctrl = UVC_XU_CTRL_TOF;
   
-  uint16_t send[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
-  uint16_t recv[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
+  uint16_t send[5] = { TOF_SET_DEPTH_RANGE, 0, 0, 0, 0 };
+  uint16_t recv[5] = { TOF_GET_DEPTH_RANGE, 0, 0, 0, 0 };
   
-  int param_set[5] = { TOF_SET_DEPTH_IR, 0, 0, 0, 0 };
+  int param_set[5] = { TOF_SET_DEPTH_RANGE, 0, 0, 0, 0 };
   int param_min[5] = { 0x0000, 0, 0, 0, 0 };
   int param_max[5] = { 0xFFFF, 1, 1, 1, 1 };
   
-//  int param = 0;
   int err   = 0;
   
   // Set Parameter MAX/min and ToF Process Number
-  if ( param_name == "depth_ir" )
-  {
-    param_set[0] = TOF_SET_DEPTH_IR;
-    param_set[1] = param;
-    
-    param_min[1] = 0;
-    param_max[1] = 1;
-    
-    recv[0] = TOF_GET_DEPTH_IR;
-  }
-  else if ( param_name == "depth_range" )
+  if ( param_name == "depth_range" )
   {
     param_set[0] = TOF_SET_DEPTH_RANGE;
     param_set[1] = param;
     
     param_min[1] = 0;
-//      param_max[1] = 1;
     param_max[1] = 2;
     
     recv[0] = TOF_GET_DEPTH_RANGE;
@@ -756,8 +801,7 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     param_set[1] = param;
     
     param_min[1] = 1;
-//      param_max[1] = 2000;
-    param_max[1] = 0xFFFF;
+    param_max[1] = 2400;
     
     recv[0] = TOF_GET_PULSE_COUNT;
   }
@@ -765,10 +809,12 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
   {
     param_set[0] = TOF_SET_LD_ENABLE;
     param_set[1] = param;
-
+    param_set[2] = param;
+    
     param_min[1] = 0;
-//      param_max[1] = 15;
     param_max[1] = 3;
+    param_min[2] = 0;
+    param_max[2] = 3;
     
     recv[0] = TOF_GET_LD_ENABLE;
   }
@@ -782,15 +828,49 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     
     recv[0] = TOF_GET_IR_GAIN;
   }
-  else if ( param_name == "error_stop" )
+  else if ( param_name == "ae_mode" )
   {
-    param_set[0] = TOF_SET_ERROR_STOP;
+    ctrl = UVC_XU_CTRL_RGB;
+    param_set[0] = RGB_SET_AE_MODE;
+    param_set[1] = param;
+    
+    param_min[1] = 0;
+    param_max[1] = 3;
+  
+    recv[0] = RGB_GET_AE_MODE;
+  }
+  else if ( param_name == "brightness_gain" )
+  {
+    ctrl = UVC_XU_CTRL_RGB;
+    param_set[0] = RGB_SET_BRIGHTNESS_GAIN;
+    param_set[1] = param;
+    
+    param_min[1] = 100;
+    param_max[1] = 1067;
+  
+    recv[0] = RGB_GET_BRIGHTNESS_GAIN;
+  }
+  else if ( param_name == "exposure_time" )
+  {
+    ctrl = UVC_XU_CTRL_RGB;
+    param_set[0] = RGB_SET_SHUTTER_CONTROL;
+    param_set[1] = param;
+    
+    param_min[1] = 0x0069;
+    param_max[1] = 0x28F6;
+  
+    recv[0] = RGB_GET_SHUTTER_CONTROL;
+  }
+  else if ( param_name == "color_correction" )
+  {
+    ctrl = UVC_XU_CTRL_RGB;
+    param_set[0] = RGB_SET_COLOR_CORRECTION;
     param_set[1] = param;
     
     param_min[1] = 0;
     param_max[1] = 1;
-    
-    recv[0] = TOF_GET_ERROR_STOP;
+  
+    recv[0] = RGB_GET_COLOR_CORRECTION;
   }
   else
   {
@@ -819,19 +899,6 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     ROS_ERROR( "Set Parameter %s failed. Error: %d", param_name.c_str(), err );
     return err;
   }
-  
-  // Get Parameter on TOF Camera for Check
-//  err = getCameraCtrl( ctrl, recv, sizeof(recv) );
-//  if ( err == sizeof(recv) )
-//  {
-//    ROS_INFO( "Get Parameter %s as { %d, %d, %d, %d } on TOF Camera",
-//                param_name.c_str(), recv[1], recv[2], recv[3], recv[4] );
-//  }
-//  else
-//  {
-//    ROS_ERROR( "Get Parameter of %s for Check Failed. Error : %d", param_name.c_str(), err );
-//    return err;
-//  }
   
   return err;
 }
@@ -899,9 +966,6 @@ void CameraDriver::getToFInfo_All()
   uint16_t build_d;
   tof_err = getToFVersion( version_n, build_n, build_y, build_d );
   
-//  uint16_t depth_ir;
-//  tof_err = getToFDepthIR( depth_ir );
-  
   uint16_t depth_range;
   uint16_t dr_index;
   tof_err = getToFDepthRange( depth_range, dr_index );
@@ -915,21 +979,20 @@ void CameraDriver::getToFInfo_All()
   uint16_t pulse_count;
   tof_err = getToFPulseCount( pulse_count );
   
-  uint16_t ld_enable;
-  tof_err = getToFLDEnable( ld_enable );
+  uint16_t ld_enable_near;
+  uint16_t ld_enable_wide;
+  tof_err = getToFLDEnable( ld_enable_near, ld_enable_wide );
   
-  double depth_cnv_gain;
-  tof_err = getToFDepthCnvGain( depth_cnv_gain );
-  ROS_INFO( "Get Depth Cnv Gain : %f", depth_cnv_gain );
-
+  depth_cnv_gain_ = 0.5;
+  tof_err = getToFDepthCnvGain( depth_cnv_gain_ );
+  ROS_INFO( "Get Depth Cnv Gain : %f", depth_cnv_gain_ );
   
-  short          offset_val;
   unsigned short max_data;
   unsigned short min_dist;
   unsigned short max_dist;
-  tof_err = getToFDepthInfo( offset_val, max_data, min_dist, max_dist );
+  tof_err = getToFDepthInfo( depth_offset_, max_data, min_dist, max_dist );
   ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
-              offset_val, max_data, min_dist, max_dist );
+              depth_offset_, max_data, min_dist, max_dist );
 
   uint16_t ir_gain;
   tof_err = getToFIRGain( ir_gain );
@@ -939,8 +1002,9 @@ void CameraDriver::getToFInfo_All()
   tof_err = getToFTemperature( t1, t2 );
   ROS_INFO( "Get Temperature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
   
-//  uint16_t error_stop;
-//  tof_err = getToFErrorStop( error_stop );
+  int time_near, time_wide;
+  tof_err = getToFLDPulseWidth( time_near, time_wide );
+  ROS_INFO( "Get LD Pulse Width - Near: %d / Wide: %d [ns]", time_near, time_near );
   
   uint16_t common_err;
   uint16_t eeprom_err_factory;
@@ -1058,7 +1122,7 @@ int CameraDriver::getToFPulseCount( uint16_t& pulse_count )
 }
 
 
-int CameraDriver::getToFLDEnable( uint16_t& ld_enable )
+int CameraDriver::getToFLDEnable( uint16_t& ld_enable_near, uint16_t& ld_enable_wide )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
   uint16_t data[5] = { TOF_GET_LD_ENABLE, 0, 0, 0, 0 };
@@ -1067,8 +1131,9 @@ int CameraDriver::getToFLDEnable( uint16_t& ld_enable )
   err = getCameraCtrl( ctrl, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
-    ld_enable = data[1];
-    ROS_INFO( "Get LD Enable : %d", ld_enable );
+    ld_enable_near = data[1];
+    ld_enable_wide = data[2];
+    ROS_INFO( "Get LD Enable - Near: %d Wide: %d", ld_enable_near, ld_enable_wide );
   }
   else
   {
@@ -1100,7 +1165,7 @@ int CameraDriver::getToFDepthCnvGain( double& depth_cnv_gain )
 }
 
 
-int CameraDriver::getToFDepthInfo( short&          offset_val,
+int CameraDriver::getToFDepthInfo( short&          depth_offset,
                                    unsigned short& max_data,
                                    unsigned short& min_dist,
                                    unsigned short& max_dist )
@@ -1112,12 +1177,12 @@ int CameraDriver::getToFDepthInfo( short&          offset_val,
   err = getCameraCtrl( ctrl, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
-    offset_val = *(short*)(&data[1]);
+    depth_offset = *(short*)(&data[1]);
     max_data   = *(unsigned short*)(&data[2]);
     min_dist   = *(unsigned short*)(&data[3]);
     max_dist   = *(unsigned short*)(&data[4]);
 //    ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
-//                offset_val, max_data, min_dist, max_dist );
+//                depth_offset, max_data, min_dist, max_dist );
   }
   else
   {
@@ -1160,7 +1225,6 @@ int CameraDriver::getToFTemperature( double& t1, double& t2 )
   {
     t1 = data[1] / 256.0;
     t2 = data[2] / 256.0;
-    // ROS_INFO( "Get Temperature T1 : %.1f / T2 : %.1f [deg C]", t1, t2 );
   }
   else
   {
@@ -1171,6 +1235,27 @@ int CameraDriver::getToFTemperature( double& t1, double& t2 )
 }
 
 
+int CameraDriver::getToFLDPulseWidth( int& time_near, int& time_wide )
+{
+  uint8_t  ctrl    = UVC_XU_CTRL_TOF;
+  uint16_t data[5] = { TOF_GET_LD_PULSE_WIDTH, 0, 0, 0, 0 };
+  int err;
+  
+  err = getCameraCtrl( ctrl, data, sizeof(data) );
+  if ( err == sizeof(data) )
+  {
+    time_near = data[1];
+    time_wide = data[2];
+  }
+  else
+  {
+    ROS_ERROR( "Get Temperature failed. Error: %d", err );
+  }
+  
+  return err;
+}
+
+#if 0
 int CameraDriver::getToFErrorStop( uint16_t& error_stop )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1190,7 +1275,7 @@ int CameraDriver::getToFErrorStop( uint16_t& error_stop )
   
   return err;
 }
-
+#endif
 
 int CameraDriver::getToFVersion( uint16_t& version_n,
                                  uint16_t& build_n,
@@ -1248,44 +1333,9 @@ int CameraDriver::getToFErrorInfo( uint16_t& common_err,
 }
 
 
-int CameraDriver::setRGBAEMode()
-{
-  int err;
-  
-  uint8_t  ctrl    = UVC_XU_CTRL_RGB;
-  uint16_t data[5] = { RGB_SET_AE_MODE, 3, 0, 0, 0 };
-  
-  err = setCameraCtrl( ctrl, data, sizeof(data) );
-  if ( err != sizeof(data) )
-  {
-    ROS_ERROR( "Set Error Info failed. Error: %d", err );
-  }
-  
-  return err;
-}
-
-int CameraDriver::setRGBColorCorrection()
-{
-  int err;
-  
-  uint8_t  ctrl    = UVC_XU_CTRL_RGB;
-  uint16_t data[5] = { RGB_SET_COLOR_CORRECTION, 0, 0, 0, 0 };
-  
-  err = setCameraCtrl( ctrl, data, sizeof(data) );
-  if ( err != sizeof(data) )
-  {
-    ROS_ERROR( "Set Error Info failed. Error: %d", err );
-  }
-  
-  return err;
-}
-
 void CameraDriver::getRGBInfo_All()
 {
   int err;
-  
-  err = setRGBAEMode();
-  err = CameraDriver::setRGBColorCorrection();
   
   uint16_t ae_mode;
   err = getRGBAEMode( ae_mode );
@@ -1294,11 +1344,11 @@ void CameraDriver::getRGBInfo_All()
   double brightness_maxg;
   err = getRGBBrightnessGain( brightness_gain, brightness_maxg );
   
-  uint16_t color_correction;
-  getRGBColorCorrection( color_correction );
-  
   double exposure_time;
-  getRGBShutterControl( exposure_time );
+  err = getRGBShutterControl( exposure_time );
+  
+  uint16_t color_correction;
+  err = getRGBColorCorrection( color_correction );
   
   return;
 }
@@ -1389,8 +1439,11 @@ int CameraDriver::getRGBColorCorrection( uint16_t& color_correction )
 }
 
 
-void CameraDriver::publishToFTemperature( std::string frame_id )
+void CameraDriver::publishToFTemperature()
 {
+  std::string frame_id;
+  priv_nh_.getParam( "frame_id" , frame_id );
+  
   sensor_msgs::Temperature t_msg;
   
   double t1;
