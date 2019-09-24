@@ -30,7 +30,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// Based on original source from Ken Tossell's libuvc_camera (BSD). License copied below.
+// Based on original source from Ken Tossell's libuvc_camera. License copied below.
 //
 // * fix code style for ROS coding guidelines
 // * change namespace from libuvc_camera to cis_camera
