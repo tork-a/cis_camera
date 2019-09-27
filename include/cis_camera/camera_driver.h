@@ -248,11 +248,13 @@ private:
   bool            config_changed_;
   
   camera_info_manager::CameraInfoManager cinfo_manager_;
-  camera_info_manager::CameraInfoManager cinfo_manager_color_;
   camera_info_manager::CameraInfoManager cinfo_manager_ir_;
+  camera_info_manager::CameraInfoManager cinfo_manager_depth_;
+  camera_info_manager::CameraInfoManager cinfo_manager_color_;
   
   std::string camera_info_url_;
   std::string camera_info_url_ir_;
+  std::string camera_info_url_depth_;
   std::string camera_info_url_color_;
   
   double r_gain_, g_gain_, b_gain_;

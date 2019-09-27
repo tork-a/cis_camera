@@ -8,7 +8,7 @@
   <arg name="depth_range" default="0" />
   <arg name="threshold"   default="0" />
   <arg name="nr_filter"   default="1" />
-  <arg name="pulse_count" default="1200" />
+  <arg name="pulse_count" default="2000" />
   <arg name="ld_enable"   default="3" />
   <arg name="ir_gain"     default="256" />
   
@@ -64,22 +64,27 @@
       <param name="frame_rate"     value="30" />
       
       <param name="frame_id"       value="camera"  />
+      <param name="frame_id_ir"    value="camera_ir" />
       <param name="frame_id_depth" value="camera_depth" />
       <param name="frame_id_color" value="camera_color" />
       
-      <param name="timestamp_method"      value="start" />
+      <param name="timestamp_method" value="start" />
+      
       <param name="camera_info_url"       value="file:///$(find cis_camera)/config/camera.yaml" />
+      <param name="camera_info_url_ir"    value="file:///$(find cis_camera)/config/camera_ir.yaml" />
+      <param name="camera_info_url_depth" value="file:///$(find cis_camera)/config/camera_ir.yaml" />
       <param name="camera_info_url_color" value="file:///$(find cis_camera)/config/camera_color.yaml" />
-      <param name="camera_info_url_ir" value="file:///$(find cis_camera)/config/camera_ir.yaml" />
       
     </node>
     
     <node name="camera_base_to_camera" pkg="tf" type="static_transform_publisher"
           args="0 0 0.0317 0 0 0 camera_base camera 100" />
-    <node name="camera_to_camera_depth" pkg="tf" type="static_transform_publisher"
-          args="0.0088 -0.0110 0.0 -1.5708 0 -1.5708 camera camera_depth 100" />
+    <node name="camera_to_camera_ir" pkg="tf" type="static_transform_publisher"
+          args="0.0044 -0.0110 0.0 -1.5708 0 -1.5708 camera camera_ir 100" />
+    <node name="camera_ir_to_camera_depth" pkg="tf" type="static_transform_publisher"
+          args="0 0 0 0 0 0 camera_ir camera_depth 100" />
     <node name="camera_to_camera_color" pkg="tf" type="static_transform_publisher"
-          args="0.0201  0.0155 0.0 -1.5708 0 -1.5708 camera camera_color 100" />
+          args="0.0152  0.0155 0.0 -1.5708 0 -1.5708 camera camera_color 100" />
     
   </group>
   

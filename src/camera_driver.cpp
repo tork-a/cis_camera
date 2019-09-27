@@ -99,8 +99,9 @@ CameraDriver::CameraDriver( ros::NodeHandle nh, ros::NodeHandle priv_nh ) :
     config_server_(mutex_, priv_nh_),
     config_changed_(false),
     cinfo_manager_(nh),
-    cinfo_manager_color_(nh),
-    cinfo_manager_ir_(nh)
+    cinfo_manager_ir_(nh),
+    cinfo_manager_depth_(nh),
+    cinfo_manager_color_(nh)
 {
   readConfigFromParameterServer();
   advertiseROSTopics();
@@ -123,6 +124,7 @@ void CameraDriver::readConfigFromParameterServer()
   
   err = priv_nh_.getParam( "camera_info_url"      , camera_info_url_       );
   err = priv_nh_.getParam( "camera_info_url_ir"   , camera_info_url_ir_    );
+  err = priv_nh_.getParam( "camera_info_url_depth", camera_info_url_depth_ );
   err = priv_nh_.getParam( "camera_info_url_color", camera_info_url_color_ );
 }
 
@@ -330,14 +332,17 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   
   sensor_msgs::CameraInfo::Ptr cinfo( new sensor_msgs::CameraInfo( cinfo_manager_.getCameraInfo() ) );
   sensor_msgs::CameraInfo::Ptr cinfo_ir( new sensor_msgs::CameraInfo( cinfo_manager_ir_.getCameraInfo() ) );
+  sensor_msgs::CameraInfo::Ptr cinfo_depth( new sensor_msgs::CameraInfo( cinfo_manager_depth_.getCameraInfo() ) );
   sensor_msgs::CameraInfo::Ptr cinfo_color( new sensor_msgs::CameraInfo( cinfo_manager_color_.getCameraInfo() ) );
   
   std::string frame_id;
+  std::string frame_id_ir;
   std::string frame_id_depth;
   std::string frame_id_color;
-  err = priv_nh_.getParam( "frame_id"      ,  frame_id       );
-  err = priv_nh_.getParam( "frame_id_depth",  frame_id_depth );
-  err = priv_nh_.getParam( "frame_id_color",  frame_id_color );
+  err = priv_nh_.getParam( "frame_id"      , frame_id       );
+  err = priv_nh_.getParam( "frame_id_ir"   , frame_id_ir    );
+  err = priv_nh_.getParam( "frame_id_depth", frame_id_depth );
+  err = priv_nh_.getParam( "frame_id_color", frame_id_color );
   
   if ( frame->frame_format == UVC_FRAME_FORMAT_GRAY16 )
   {
@@ -462,18 +467,28 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       cinfo_ir->D[1] = k2;
       cinfo_ir->D[2] = p1;
       cinfo_ir->D[3] = p2;
-      cinfo_ir->D[4] = k3;
+      
+      cinfo_depth->D[4] = k3;
+      cinfo_depth->K[0] = fx;
+      cinfo_depth->K[4] = fy;
+      cinfo_depth->K[2] = cx;
+      cinfo_depth->K[5] = cy;
+      cinfo_depth->D[0] = k1;
+      cinfo_depth->D[1] = k2;
+      cinfo_depth->D[2] = p1;
+      cinfo_depth->D[3] = p2;
+      cinfo_depth->D[4] = k3;
     }
     else
     {
-      fx = cinfo_ir->K[0];
-      fy = cinfo_ir->K[4];
-      cx = cinfo_ir->K[2];
-      cy = cinfo_ir->K[5];
-      k1 = cinfo_ir->D[0];
-      k2 = cinfo_ir->D[1];
-      p1 = cinfo_ir->D[2];
-      p2 = cinfo_ir->D[3];
+      fx = cinfo_depth->K[0];
+      fy = cinfo_depth->K[4];
+      cx = cinfo_depth->K[2];
+      cy = cinfo_depth->K[5];
+      k1 = cinfo_depth->D[0];
+      k2 = cinfo_depth->D[1];
+      p1 = cinfo_depth->D[2];
+      p2 = cinfo_depth->D[3];
     }
     
     double xp, yp, x2, y2, r2, r4, r6, k0, s0;
@@ -520,28 +535,31 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   image->header.frame_id = frame_id;
   image->header.stamp    = timestamp;
   
-  image_bgr8->header.frame_id = frame_id_color;
-  image_bgr8->header.stamp    = timestamp;
+  image_ir->header.frame_id = frame_id_ir;
+  image_ir->header.stamp    = timestamp;
   
   image_depth->header.frame_id = frame_id_depth;
   image_depth->header.stamp    = timestamp;
   
-  image_ir->header.frame_id = frame_id_depth;
-  image_ir->header.stamp    = timestamp;
+  image_bgr8->header.frame_id = frame_id_color;
+  image_bgr8->header.stamp    = timestamp;
   
   cinfo->header.frame_id = frame_id;
   cinfo->header.stamp    = timestamp;
   
-  cinfo_ir->header.frame_id = frame_id_depth;
+  cinfo_ir->header.frame_id = frame_id_ir;
   cinfo_ir->header.stamp    = timestamp;
+  
+  cinfo_depth->header.frame_id = frame_id_depth;
+  cinfo_depth->header.stamp    = timestamp;
   
   cinfo_color->header.frame_id = frame_id_color;
   cinfo_color->header.stamp    = timestamp;
   
   pub_camera_.publish( image, cinfo );
-  pub_color_.publish( image_bgr8, cinfo_color );
-  pub_depth_.publish( image_depth, cinfo_ir );
   pub_ir_.publish( image_ir, cinfo_ir );
+  pub_depth_.publish( image_depth, cinfo_depth );
+  pub_color_.publish( image_bgr8, cinfo_color );
   
 //  publishToFTemperature();
   
@@ -690,6 +708,7 @@ void CameraDriver::OpenCamera()
 
   cinfo_manager_.loadCameraInfo( camera_info_url_ );
   cinfo_manager_ir_.loadCameraInfo( camera_info_url_ir_ );
+  cinfo_manager_depth_.loadCameraInfo( camera_info_url_depth_ );
   cinfo_manager_color_.loadCameraInfo( camera_info_url_color_ );
   
   // TOF Camera Settigns
