@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+  
+  <arg name="hz"            default="30" />
+  <arg name="hzerror"       default="1" />
+  <arg name="test_duration" default="5.0" />
+  <arg name="wait_time"     default="10.0" />
+  
+  <include file="$(find cis_camera)/launch/tof.launch" />
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_depth_ir" >
+    <param name="param_name_target" value="/camera/cistof/depth_ir" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_depth_range" >
+    <param name="param_name_target" value="/camera/cistof/depth_range" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_threshold" >
+    <param name="param_name_target" value="/camera/cistof/threshold" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_nr_filter" >
+    <param name="param_name_target" value="/camera/cistof/nr_filter" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_pulse_count" >
+    <param name="param_name_target" value="/camera/cistof/pulse_count" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_ld_enable" >
+    <param name="param_name_target" value="/camera/cistof/ld_enable" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_ir_gain" >
+    <param name="param_name_target" value="/camera/cistof/ir_gain" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="paramtest" name="paramtest_nonempty"
+        test-name="nonempty_error_stop" >
+    <param name="param_name_target" value="/camera/cistof/error_stop" />
+    <param name="test_duration"     value="$(arg test_duration)" />
+    <param name="wait_time"         value="$(arg wait_time)" />
+  </test>
+  
+  <test pkg="rostest" type="hztest" name="hz_test"
+        test-name="hz_image_raw" >
+    <param name="topic"         value="/camera/depth/image_raw" />
+    <param name="hz"            value="$(arg hz)" />
+    <param name="hzerror"       value="$(arg hzerror)" />
+    <param name="test_duration" value="$(arg test_duration)" />
+  </test>
+  
+  <test pkg="rostest" type="hztest" name="hz_test"
+        test-name="hz_t1" >
+    <param name="topic"         value="/camera/cistof/t1" />
+    <param name="hz"            value="$(arg hz)" />
+    <param name="hzerror"       value="$(arg hzerror)" />
+    <param name="test_duration" value="$(arg test_duration)" />
+  </test>
+  
+  <test pkg="rostest" type="hztest" name="hz_test"
+        test-name="hz_t2" >
+    <param name="topic"         value="/camera/cistof/t2" />
+    <param name="hz"            value="$(arg hz)" />
+    <param name="hzerror"       value="$(arg hzerror)" />
+    <param name="test_duration" value="$(arg test_duration)" />
+  </test>
+  
+</launch>

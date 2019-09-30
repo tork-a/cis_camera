@@ -1,0 +1,5 @@
+#!/bin/bash
+echo "Copying udev rules"
+sudo cp `rospack find cis_camera`/debian/udev /etc/udev/rules.d/90-ciscamera.rules
+echo "Restarting udev"
+sudo udevadm control --reload-rules && udevadm trigger
