@@ -487,6 +487,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       cy = cinfo_depth->K[5];
       k1 = cinfo_depth->D[0];
       k2 = cinfo_depth->D[1];
+      k3 = cinfo_depth->D[4];
       p1 = cinfo_depth->D[2];
       p2 = cinfo_depth->D[3];
     }
