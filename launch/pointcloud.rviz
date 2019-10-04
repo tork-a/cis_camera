@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 737
   - Class: rviz/Selection
@@ -64,6 +63,8 @@ Visualization Manager:
           Value: true
         camera_depth:
           Value: true
+        camera_ir:
+          Value: true
         map:
           Value: true
       Marker Scale: 0.400000006
@@ -77,15 +78,16 @@ Visualization Manager:
             camera:
               camera_color:
                 {}
-              camera_depth:
-                {}
+              camera_ir:
+                camera_depth:
+                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.24980187
-        Min Value: 0.461800456
+        Max Value: 2.47439671
+        Min Value: 0.298401713
         Value: true
       Axis: X
       Channel Name: z
@@ -96,9 +98,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 1.70600009
+      Max Intensity: 2.28800011
       Min Color: 0; 0; 0
-      Min Intensity: 0.383000016
+      Min Intensity: 0.338000029
       Name: PointCloud2
       Position Transformer: XYZ
       Queue Size: 10
@@ -111,6 +113,36 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 2.31320333
+        Min Value: 0.343200475
+        Value: true
+      Axis: X
+      Channel Name: z
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 1.70600009
+      Min Color: 0; 0; 0
+      Min Intensity: 0.383000016
+      Name: PointCloud2 RGB
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.00300000003
+      Style: Flat Squares
+      Topic: /camera/depth_registered/points
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
     - Class: jsk_rviz_plugin/CameraInfo
       Enabled: true
       Image Topic: /camera/depth/image_rect
@@ -202,25 +234,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.65046644
+      Distance: 3.64038968
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.595096648
-        Y: 0.415606976
-        Z: 0.929644465
+        X: 1.44540536
+        Y: 0.0664739162
+        Z: 0.741623104
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.364795744
+      Pitch: 0.324795336
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.66859245
+      Yaw: 2.46359706
     Saved: ~
 Window Geometry:
   Displays:
