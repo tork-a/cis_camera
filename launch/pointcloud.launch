@@ -28,6 +28,9 @@
   <arg name="g_gain" default="1.0" />
   <arg name="b_gain" default="1.0" />
   
+  <!-- PointCloud Argument -->
+  <arg name="pointcloud_rgb" default="false" />
+  
   <!-- TOF camera launch -->
   <include file="$(find cis_camera)/launch/tof.launch" >
     
@@ -56,6 +59,7 @@
   </include>
   
   <group ns="$(arg camera)">
+    
     <arg name="manager" value="$(arg camera)_nodelet_manager"/>
     <arg name="debug"   default="false" />
     
@@ -66,16 +70,20 @@
     </include>
     
     <include file="$(find rgbd_launch)/launch/includes/processing.launch.xml">
-      <arg name="manager" value="$(arg manager)" />
-      <arg name="respawn" value="false" />
-      <arg name="rgb_processing" value="true" />
-      <arg name="ir_processing" value="true" />
+      
+      <arg name="manager"          value="$(arg manager)" />
+      <arg name="respawn"          value="false" />
+      <arg name="rgb_processing"   value="true" />
+      <arg name="ir_processing"    value="true" />
       <arg name="depth_processing" value="true" />
-      <arg name="depth_registered_processing" value="false" />
-      <arg name="disparity_processing" value="false" />
+      
+      <arg name="depth_registered_processing" value="$(arg pointcloud_rgb)" />
+      <arg name="hw_registered_processing"    value="$(arg pointcloud_rgb)" />
+      <arg name="sw_registered_processing"    value="$(arg pointcloud_rgb)" />
+      
+      <arg name="disparity_processing"            value="false" />
       <arg name="disparity_registered_processing" value="false" />
-      <arg name="hw_registered_processing" value="false" />
-      <arg name="sw_registered_processing" value="false" />
+      
     </include>
     
   </group>
