@@ -22,6 +22,9 @@
   <arg name="g_gain" default="1.0" />
   <arg name="b_gain" default="1.0" />
   
+  <!-- Camera Misc Arguments -->
+  <arg name="temp_time" default="1.0" />
+  
   <group ns="camera">
     <node pkg="cis_camera" type="camera_node" name="cistof" >
       
@@ -39,7 +42,7 @@
       <param name="serial"  value=""  />
       <param name="index"   value="0" />
       
-      <!-- Depth/IR Camera Parameters-->
+      <!-- Depth/IR Camera Parameters -->
       <param name="depth_range" value="$(arg depth_range)" />
       <param name="threshold"   value="$(arg threshold)" />
       <param name="nr_filter"   value="$(arg nr_filter)" />
@@ -47,7 +50,7 @@
       <param name="ld_enable"   value="$(arg ld_enable)" />
       <param name="ir_gain"     value="$(arg ir_gain)" />
       
-      <!-- RGB Camera Parameters-->
+      <!-- RGB Camera Parameters -->
       <param name="ae_mode"          value="$(arg ae_mode)" />
       <param name="brightness_gain"  value="$(arg brightness_gain)" />
       <param name="exposure_time"    value="$(arg exposure_time)" />
@@ -56,6 +59,9 @@
       <param name="r_gain" value="r_gain" />
       <param name="g_gain" value="g_gain" />
       <param name="b_gain" value="b_gain" />
+      
+      <!-- Camera Misc Parameters -->
+      <param name="temp_time" value="$(arg temp_time)" />
       
       <!-- Image Sizes and Types -->
       <param name="width"          value="1920" />

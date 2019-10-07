@@ -25,6 +25,9 @@
   <arg name="g_gain" default="1.0" />
   <arg name="b_gain" default="1.0" />
   
+  <!-- Camera Misc Arguments -->
+  <arg name="temp_time" default="1.0" />
+  
   <group ns="$(arg camera)">
     
     <node pkg="nodelet" type="nodelet" name="$(arg manager_name)" args="manager" output="screen" />
@@ -56,6 +59,9 @@
       <param name="r_gain" value="$(arg r_gain)" />
       <param name="g_gain" value="$(arg g_gain)" />
       <param name="b_gain" value="$(arg b_gain)" />
+      
+      <!-- Camera Misc Parameters -->
+      <param name="temp_time" value="$(arg temp_time)" />
       
       <!-- Image Sizes and Types -->
       <param name="width"          value="1920" />

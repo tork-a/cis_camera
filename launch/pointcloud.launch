@@ -28,6 +28,9 @@
   <arg name="g_gain" default="1.0" />
   <arg name="b_gain" default="1.0" />
   
+  <!-- Camera Misc Arguments -->
+  <arg name="temp_time" default="1.0" />
+  
   <!-- PointCloud Argument -->
   <arg name="pointcloud_rgb" default="false" />
   
@@ -55,6 +58,9 @@
     <arg name="r_gain" value="$(arg r_gain)" />
     <arg name="g_gain" value="$(arg g_gain)" />
     <arg name="b_gain" value="$(arg b_gain)" />
+    
+    <!-- Camera Misc Parameters -->
+    <arg name="temp_time" value="$(arg temp_time)" />
     
   </include>
   

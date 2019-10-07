@@ -147,6 +147,12 @@ void CameraDriver::advertiseROSTopics()
   pub_depth_  = depth_it.advertiseCamera( "image_raw", 1, false );
   pub_ir_     = ir_it.advertiseCamera( "image_raw", 1, false );
   
+  // Set Publishers for TOF Camera Temperature
+  std::string node_name = ros::this_node::getName();
+  pub_tof_t1_ = nh_.advertise<sensor_msgs::Temperature>( node_name + "/t1", 1000 );
+  pub_tof_t2_ = nh_.advertise<sensor_msgs::Temperature>( node_name + "/t2", 1000 );
+  
+  return;
 }
 
 
@@ -722,10 +728,15 @@ void CameraDriver::OpenCamera()
   getToFInfo_All();
   getRGBInfo_All();
   
-  // Set Publishers for TOF Camera Temperature
-  std::string node_name = ros::this_node::getName();
-  pub_tof_t1_ = nh_.advertise<sensor_msgs::Temperature>( node_name + "/t1", 1000 );
-  pub_tof_t2_ = nh_.advertise<sensor_msgs::Temperature>( node_name + "/t2", 1000 );
+  // Set Timer for Publishing Temperatures 
+  double temp_time = 0.0;
+  err = priv_nh_.getParam( "temp_time", temp_time );
+  if ( 0.0 < temp_time )
+  {
+    ROS_INFO( "Set Timer for Publishing Temperatures as %.3f [sec]", temp_time );
+    temp_timer_ = nh_.createTimer( ros::Duration( temp_time ), 
+                                   boost::bind( &CameraDriver::TemperatureCallback, this ) );
+  }
   
   tof_err = clearToFError();
   
@@ -1528,6 +1539,18 @@ int CameraDriver::getRGBColorCorrection( uint16_t& color_correction )
 }
 
 
+void CameraDriver::TemperatureCallback( void* ptr )
+{
+  boost::recursive_mutex::scoped_lock( mutex_ );
+  
+  CameraDriver *driver = static_cast<CameraDriver*>(ptr);
+  
+  driver->publishToFTemperature();
+  
+  return;
+}
+
+
 void CameraDriver::publishToFTemperature()
 {
   std::string frame_id;
@@ -1560,6 +1583,8 @@ void CameraDriver::CloseCamera()
   
   uvc_unref_device( dev_ );
   dev_ = NULL;
+  
+  temp_timer_.stop();
   
   state_ = Stopped;
 }
