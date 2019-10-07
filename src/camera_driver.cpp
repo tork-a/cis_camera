@@ -392,7 +392,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       y1 = static_cast<double>( *(uyvy_ptr+3) );
       
       r0 = 1.574800 * ( v0 - 128 );
-      g0 = 0.187324 * ( u0 - 128 ) - 0.468124 * ( v0 - 128 );
+      g0 = 0.187324 * ( u0 - 128 ) + 0.468124 * ( v0 - 128 );
       b0 = 1.855600 * ( u0 - 128 );
       
       *(bgr8_ptr)   = cvtDoubleToByte( ( y0 + b0 ) * b_gain_ );
