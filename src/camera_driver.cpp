@@ -147,6 +147,7 @@ void CameraDriver::advertiseROSTopics()
   pub_depth_  = depth_it.advertiseCamera( "image_raw", 1, false );
   pub_ir_     = ir_it.advertiseCamera( "image_raw", 1, false );
   
+  return;
 }
 
 
@@ -204,6 +205,7 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
     if ( new_config.depth_range != config_.depth_range )
     {
       setToFMode_ROSParameter( "depth_range", new_config.depth_range );
+      setToFMode_ROSParameter( "pulse_count", new_config.pulse_count );
     }
     
     if ( new_config.threshold != config_.threshold )
@@ -267,6 +269,7 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
   
   config_changed_ = true;
   config_ = new_config;
+  
   return;
 }
 
@@ -562,8 +565,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   pub_depth_.publish( image_depth, cinfo_depth );
   pub_color_.publish( image_bgr8, cinfo_color );
   
-//  publishToFTemperature();
-  
   return;
 }
 
@@ -777,7 +778,10 @@ int CameraDriver::setToFMode_All()
 {
   int err;
   
-//  std::string rosparam_names[8] =
+  // Set RGB White Balance
+  err = setToFMode_ROSParameter( "white_balance", 0 );
+  
+  // Set Depth/IR & RGB Parameters
   std::string rosparam_names[10] =
   {
     "depth_range",
@@ -818,29 +822,43 @@ int CameraDriver::setToFMode_All()
 }
 
 
-int CameraDriver::setToFMode_ROSParameter( std::string param_name, double param = 0.0 )
+int CameraDriver::setToFMode_ROSParameter( std::string param_name, double param )
 {
-  int err     = 0;
-  int param_i = 0;
+  int err      = 0;
+  
+  uint32_t param_ui0 = 0;
+  uint16_t param_ui1 = 0;
+  uint16_t param_ui2 = 0;
   
   if ( param_name == "brightness_gain" )
   {
-    param_i = floor( param * 100 );
+    param_ui0 = (uint32_t)( fabs( param ) * 100.0 );
   }
   else if ( param_name == "exposure_time" )
   {
-    param_i = floor( param * 0x00100000 );
+    param_ui0 = (uint32_t)( fabs( param ) * 0x00100000 );
   }
   else
   {
     return err;
   }
   
-  err = setToFMode_ROSParameter( param_name, param_i );
+  param_ui1 = (uint16_t)(   param_ui0         & 0xFFFF );
+  param_ui2 = (uint16_t)( ( param_ui0 >> 16 ) & 0xFFFF );
+  err = setToFMode_ROSParameter( param_name, param_ui1, param_ui2 );
+  
   return err;
 }
 
-int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0 )
+int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param )
+{
+  int err;
+  
+  err = setToFMode_ROSParameter( param_name, param, 0 );
+  return err;
+}
+
+int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param, int param_2 )
 {
   uint8_t ctrl = UVC_XU_CTRL_TOF;
   
@@ -890,7 +908,7 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     param_set[1] = param;
     
     param_min[1] = 1;
-    param_max[1] = 2400;
+    param_max[1] = 2000;
     
     recv[0] = TOF_GET_PULSE_COUNT;
   }
@@ -917,6 +935,11 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     
     recv[0] = TOF_GET_IR_GAIN;
   }
+  else if ( param_name == "white_balance" )
+  {
+    ctrl = UVC_XU_CTRL_RGB;
+    param_set[0] = RGB_SET_WHITE_BALANCE;
+  }
   else if ( param_name == "ae_mode" )
   {
     ctrl = UVC_XU_CTRL_RGB;
@@ -933,10 +956,13 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     ctrl = UVC_XU_CTRL_RGB;
     param_set[0] = RGB_SET_BRIGHTNESS_GAIN;
     param_set[1] = param;
+    param_set[2] = param_2;
     
     param_min[1] = 100;
     param_max[1] = 1067;
-  
+    param_min[2] = 0;
+    param_max[2] = 0xFFFF;
+    
     recv[0] = RGB_GET_BRIGHTNESS_GAIN;
   }
   else if ( param_name == "exposure_time" )
@@ -944,10 +970,13 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
     ctrl = UVC_XU_CTRL_RGB;
     param_set[0] = RGB_SET_SHUTTER_CONTROL;
     param_set[1] = param;
+    param_set[2] = param_2;
     
     param_min[1] = 0x0069;
     param_max[1] = 0x28F6;
-  
+    param_min[2] = 0;
+    param_max[2] = 0xFFFF;
+    
     recv[0] = RGB_GET_SHUTTER_CONTROL;
   }
   else if ( param_name == "color_correction" )
@@ -987,6 +1016,13 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param = 0
   {
     ROS_ERROR( "Set Parameter %s failed. Error: %d", param_name.c_str(), err );
     return err;
+  }
+  
+  // Check the valid values on ToF Camera
+  if ( param_name == "pulse_count" )
+  {
+    uint16_t pulse_count;
+    getToFPulseCount( pulse_count );
   }
   
   return err;
@@ -1104,7 +1140,7 @@ void CameraDriver::getToFInfo_All()
   return;
 }
 
-
+#if 0
 int CameraDriver::getToFDepthIR( uint16_t& depth_ir )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1124,7 +1160,7 @@ int CameraDriver::getToFDepthIR( uint16_t& depth_ir )
   
   return err;
 }
-
+#endif
 
 int CameraDriver::getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index )
 {
@@ -1243,7 +1279,6 @@ int CameraDriver::getToFDepthCnvGain( double& depth_cnv_gain )
   if ( err == sizeof(data) )
   {
     depth_cnv_gain = *(double*)(&data[1]);
-//    ROS_INFO( "Get Depth Cnv Gain : %f", depth_cnv_gain );
   }
   else
   {
@@ -1270,8 +1305,6 @@ int CameraDriver::getToFDepthInfo( short&          depth_offset,
     max_data   = *(unsigned short*)(&data[2]);
     min_dist   = *(unsigned short*)(&data[3]);
     max_dist   = *(unsigned short*)(&data[4]);
-//    ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
-//                depth_offset, max_data, min_dist, max_dist );
   }
   else
   {
@@ -1344,27 +1377,6 @@ int CameraDriver::getToFLDPulseWidth( int& time_near, int& time_wide )
   return err;
 }
 
-#if 0
-int CameraDriver::getToFErrorStop( uint16_t& error_stop )
-{
-  uint8_t  ctrl    = UVC_XU_CTRL_TOF;
-  uint16_t data[5] = { TOF_GET_ERROR_STOP, 0, 0, 0, 0 };
-  int err;
-  
-  err = getCameraCtrl( ctrl, data, sizeof(data) );
-  if ( err == sizeof(data) )
-  {
-    error_stop = data[1];
-    ROS_INFO( "Get Error Stop : %d", error_stop );
-  }
-  else
-  {
-    ROS_ERROR( "Get Error Stop failed. Error : %d", err );
-  }
-  
-  return err;
-}
-#endif
 
 int CameraDriver::getToFVersion( uint16_t& version_n,
                                  uint16_t& build_n,
@@ -1434,7 +1446,8 @@ void CameraDriver::getRGBInfo_All()
   err = getRGBBrightnessGain( brightness_gain, brightness_maxg );
   
   double exposure_time;
-  err = getRGBShutterControl( exposure_time );
+  double exposure_maxt;
+  err = getRGBShutterControl( exposure_time, exposure_maxt );
   
   uint16_t color_correction;
   err = getRGBColorCorrection( color_correction );
@@ -1473,8 +1486,12 @@ int CameraDriver::getRGBBrightnessGain( double& brightness_gain,  double& bright
   err = getCameraCtrl( ctrl, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
-    brightness_gain = (double)(data[1]) / 100.0;
-    brightness_maxg = (double)(data[3]) / 100.0;
+    uint32_t gain = ( data[2] << 16 ) + data[1];
+    uint32_t maxg = ( data[4] << 16 ) + data[3];
+    
+    brightness_gain = (double)(gain) / 100.0;
+    brightness_maxg = (double)(maxg) / 100.0;
+    
     ROS_INFO( "Get RGB Brightness Gain: %f ( MAX: %f )", brightness_gain, brightness_maxg );
   }
   else
@@ -1485,7 +1502,7 @@ int CameraDriver::getRGBBrightnessGain( double& brightness_gain,  double& bright
   return err;
 }
 
-int CameraDriver::getRGBShutterControl( double& exposure_time )
+int CameraDriver::getRGBShutterControl( double& exposure_time, double& exposure_maxt )
 {
   int err;
   
@@ -1495,8 +1512,13 @@ int CameraDriver::getRGBShutterControl( double& exposure_time )
   err = getCameraCtrl( ctrl, data, sizeof(data) );
   if ( err == sizeof(data) )
   {
-    exposure_time = (double)(data[1]) / 0x00100000;
-    ROS_INFO( "Get RGB Exposure Time: %f [sec]", exposure_time );
+    uint32_t time = ( data[2] << 16 ) + data[1];
+    uint32_t maxt = ( data[4] << 16 ) + data[3];
+    
+    exposure_time = (double)(time) / 0x00100000;
+    exposure_maxt = (double)(maxt) / 0x00100000;
+    
+    ROS_INFO( "Get RGB Exposure Time: %f (MAX: %f) [sec]", exposure_time, exposure_maxt );
   }
   else
   {
