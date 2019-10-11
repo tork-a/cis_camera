@@ -221,10 +221,14 @@ private:
   int getRGBShutterControl( double& exposure_time, double& exposure_maxt );
   int getRGBColorCorrection( uint16_t& color_correction );
   
-  void publishToFTemperature();
-  
   ros::Publisher pub_tof_t1_;
   ros::Publisher pub_tof_t2_;
+  
+  ros::Timer temp_timer_;
+  
+  static void TemperatureCallback( void* ptr );
+  
+  void publishToFTemperature();
   
   double depth_cnv_gain_;
   short  depth_offset_;
