@@ -146,7 +146,7 @@ private:
     TOF_SET_IR_GAIN         = 0x0009,
     TOF_SET_ERROR_STOP      = 0x0010,
     TOF_SET_ERROR_CLEAR     = 0x7F01,
-    TOF_GET_DEPTH_IR        = 0x8001,
+//    TOF_GET_DEPTH_IR        = 0x8001,
     TOF_GET_DEPTH_RANGE     = 0x8002,
     TOF_GET_THRESHOLD       = 0x8003,
     TOF_GET_NR_FILTER       = 0x8004,
@@ -169,6 +169,7 @@ private:
   
   enum rgb_process_num
   {
+    RGB_SET_WHITE_BALANCE    = 0x0000,
     RGB_SET_AE_MODE          = 0x0001,
     RGB_SET_BRIGHTNESS_GAIN  = 0x0002,
     RGB_SET_SHUTTER_CONTROL  = 0x0003,
@@ -183,11 +184,13 @@ private:
   int getCameraCtrl( uint8_t unit, uint16_t *data, int len );
   
   int setToFMode_ROSParameter( std::string param_name, double param );
-  int setToFMode_ROSParameter( std::string param_name, int    param );
+  int setToFMode_ROSParameter( std::string param_name, int param );
+  int setToFMode_ROSParameter( std::string param_name, int param, int param_2 );
+  
   int setToFEEPROMMode( uint16_t mode );
   int clearToFError();
   
-  int getToFDepthIR( uint16_t& depth_ir );
+//  int getToFDepthIR( uint16_t& depth_ir );
   int getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index );
   int getToFThreshold( uint16_t& threshold );
   int getToFNRFilter( uint16_t& nr_filter );
@@ -215,7 +218,7 @@ private:
   
   int getRGBAEMode( uint16_t& ae_mode );
   int getRGBBrightnessGain( double& brightness_gain, double& brightness_maxg );
-  int getRGBShutterControl( double& exposure_time );
+  int getRGBShutterControl( double& exposure_time, double& exposure_maxt );
   int getRGBColorCorrection( uint16_t& color_correction );
   
   ros::Publisher pub_tof_t1_;

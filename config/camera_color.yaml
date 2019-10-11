@@ -4,7 +4,7 @@ camera_name: camera
 camera_matrix:
   rows: 3
   cols: 3
-  data: [ 775.3, 0.0, 686.0, 0.0, 773.5, 501.0, 0.0, 0.0, 1.0 ]
+  data: [ 775.3, 0.0, 620.0, 0.0, 773.5, 480.0, 0.0, 0.0, 1.0 ]
 distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
