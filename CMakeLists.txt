@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
   sensor_msgs
   cv_bridge
+  pcl_ros
+  tf
 )
 find_package(OpenCV)
 
@@ -32,6 +34,8 @@ catkin_package(
     nodelet
     sensor_msgs
     cv_bridge
+    pcl_ros
+    tf
   LIBRARIES
     cis_camera_nodelet
 )
@@ -53,6 +57,10 @@ add_library(cis_camera_nodelet src/nodelet.cpp src/camera_driver.cpp)
 add_dependencies(cis_camera_nodelet ${cis_camera_EXPORTED_TARGETS})
 target_link_libraries(cis_camera_nodelet ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
 add_dependencies(cis_camera_nodelet ${PROJECT_NAME}_gencfg)
+
+add_executable(pcl_example src/pcl_example.cpp)
+target_link_libraries(pcl_example ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(pcl_example ${PROJECT_NAME}_gencfg)
 
 install(TARGETS camera_node cis_camera_nodelet
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
