@@ -32,7 +32,8 @@
   <arg name="temp_time" default="1.0" />
   
   <!-- PointCloud Argument -->
-  <arg name="pointcloud_rgb" default="false" />
+  <arg name="pointcloud_rgb"      default="false" />
+  <arg name="flying_pixel_filter" default="false" />
   
   <!-- TOF camera launch -->
   <include file="$(find cis_camera)/launch/tof.launch" >
@@ -91,6 +92,36 @@
       <arg name="disparity_registered_processing" value="false" />
       
     </include>
+    
+    <node if="$(arg flying_pixel_filter)"
+          name="voxel_grid"
+          pkg="nodelet" type="nodelet"
+          args="load pcl/VoxelGrid $(arg manager)"
+          output="screen" >
+      <remap unless="$(arg pointcloud_rgb)"
+              from="~input" to="/$(arg camera)/depth/points" />
+      <remap if="$(arg pointcloud_rgb)"
+              from="~input" to="/$(arg camera)/depth_registered/points" />
+      <rosparam>
+          filter_field_name: z
+          filter_limit_min: 0.01
+          filter_limit_max: 6.0
+          filter_limit_negative: False
+          leaf_size: 0.01
+      </rosparam>
+    </node>
+    
+    <node if="$(arg flying_pixel_filter)"
+          name="statistical_outlier_removal"
+          pkg="nodelet" type="nodelet"
+          args="load pcl/StatisticalOutlierRemoval $(arg manager)"
+          output="screen" >
+      <remap from="~input" to="/$(arg camera)/voxel_grid/output" />
+      <rosparam>
+          mean_k: 20
+          stddev: 0.5
+      </rosparam>
+    </node>
     
   </group>
   
