@@ -29,6 +29,7 @@
 #include <tf_conversions/tf_eigen.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 
+
 int main( int argc, char *argv[] )
 {
   /*
@@ -45,7 +46,7 @@ int main( int argc, char *argv[] )
   world_frame  = "map";
   camera_frame = "camera_depth";
   cloud_topic  = "/camera/depth/points";
-
+  
   /*
    * SETUP PUBLISHERS
    */
@@ -87,7 +88,7 @@ int main( int argc, char *argv[] )
      */
     pcl::PointCloud<pcl::PointXYZ> cloud;
     pcl::fromROSMsg (transformed_cloud, cloud);
-
+    
     /* ========================================
      * Fill Code: VOXEL GRID
      * ========================================*/
@@ -95,12 +96,12 @@ int main( int argc, char *argv[] )
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_voxel_filtered (new pcl::PointCloud<pcl::PointXYZ> ());
     pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
     voxel_filter.setInputCloud (cloud_ptr);
-    voxel_filter.setLeafSize (float(0.002), float(0.002), float(0.002));
+    voxel_filter.setLeafSize ( float(0.01), float(0.01), float(0.01) );
     voxel_filter.filter (*cloud_voxel_filtered);
-
+    
     //ROS_INFO_STREAM("Original cloud  had " << cloud_ptr->size() << " points");
     //ROS_INFO_STREAM("Downsampled cloud  with " << cloud_voxel_filtered->size() << " points");
-
+    
     /* ========================================
      * Fill Code: PASSTHROUGH FILTER(S)
      * ========================================*/
@@ -108,22 +109,33 @@ int main( int argc, char *argv[] )
     pcl::PassThrough<pcl::PointXYZ> pass_x;
     pass_x.setInputCloud(cloud_voxel_filtered);
     pass_x.setFilterFieldName("x");
-    pass_x.setFilterLimits(-1.0,3.0);
+    pass_x.setFilterLimits( -1.0, 0.5 );
     pass_x.filter(xf_cloud);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr xf_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>(xf_cloud));
     pcl::PassThrough<pcl::PointXYZ> pass_y;
     pass_y.setInputCloud(xf_cloud_ptr);
     pass_y.setFilterFieldName("y");
-    pass_y.setFilterLimits(-3.0, 3.0);
+    pass_y.setFilterLimits( -0.3, 0.3 );
     pass_y.filter(yf_cloud);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr yf_cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>(yf_cloud));
     pcl::PassThrough<pcl::PointXYZ> pass_z;
     pass_z.setInputCloud(yf_cloud_ptr);
     pass_z.setFilterFieldName("z");
-    pass_z.setFilterLimits(-1.0, 3.0);
+    pass_z.setFilterLimits( -1.0, 3.0 );
     pass_z.filter(zf_cloud);
+    
+    /* ========================================
+     * Fill Code: STATISTICAL OUTLIER REMOVAL (OPTIONAL)
+     * ========================================*/
+    pcl::PointCloud<pcl::PointXYZ>::Ptr zf_cloud_ptr( new pcl::PointCloud<pcl::PointXYZ>(zf_cloud));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud( zf_cloud_ptr );
+    sor.setMeanK ( 16 );
+    sor.setStddevMulThresh ( 0.5 );
+    sor.filter ( *sor_cloud_filtered );
     
     /* ========================================
      * Fill Code: CROPBOX (OPTIONAL)
@@ -132,10 +144,11 @@ int main( int argc, char *argv[] )
     /* ========================================
      * Fill Code: PLANE SEGEMENTATION
      * ========================================*/
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_cloud(new pcl::PointCloud<pcl::PointXYZ>(zf_cloud));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_cloud(new pcl::PointCloud<pcl::PointXYZ>( *sor_cloud_filtered ));
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
+    
     // Create the segmentation object for the planar model and set all the parameters
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
@@ -143,8 +156,9 @@ int main( int argc, char *argv[] )
     seg.setOptimizeCoefficients (true);
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setMaxIterations (200);
-    seg.setDistanceThreshold (0.004);
+    seg.setMaxIterations (100);
+    seg.setDistanceThreshold (0.02);
+    
     // Segment the largest planar component from the cropped cloud
     seg.setInputCloud (cropped_cloud);
     seg.segment (*inliers, *coefficients);
@@ -159,29 +173,30 @@ int main( int argc, char *argv[] )
     extract.setInputCloud (cropped_cloud);
     extract.setIndices(inliers);
     extract.setNegative (false);
-
+    
     // Get the points associated with the planar surface
     extract.filter (*cloud_plane);
     ROS_INFO_STREAM("PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." );
     
     // Remove the planar inliers, extract the rest
     extract.setNegative (true);
-    extract.filter (*cloud_f);
+    extract.filter ( *cloud_f );
     
     /* ========================================
      * Fill Code: PUBLISH PLANE MARKER (OPTIONAL)
      * ========================================*/
-
-
+    
+    
     /* ========================================
      * Fill Code: EUCLIDEAN CLUSTER EXTRACTION (OPTIONAL/RECOMMENDED)
      * ========================================*/
+    
      
     // Creating the KdTree object for the search method of the extraction
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
     *cloud_filtered = *cloud_f;
     tree->setInputCloud (cloud_filtered);
-
+    
     std::vector<pcl::PointIndices> cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
     ec.setClusterTolerance (0.01); // 2cm
@@ -207,33 +222,26 @@ int main( int argc, char *argv[] )
       pcl::toROSMsg(*cloud_cluster, *tempROSMsg);
       pc2_clusters.push_back(tempROSMsg);
     }
-
-
-    /* ========================================
-     * Fill Code: STATISTICAL OUTLIER REMOVAL (OPTIONAL)
-     * ========================================*/
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud_ptr= clusters.at(0);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr sor_cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud (cluster_cloud_ptr);
-    sor.setMeanK (50);
-    sor.setStddevMulThresh (1.0);
-    sor.filter (*sor_cloud_filtered);
     
+    pcl::PointCloud<pcl::PointXYZ>::Ptr largest_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+    *largest_cluster = *(clusters.at(0));
     
     /* ========================================
      * Fill Code: PUBLISH OTHER MARKERS (OPTIONAL)
      * ========================================*/
-
-
+    
+    
     /* ========================================
      * BROADCAST TRANSFORM (OPTIONAL)
      * ========================================*/
     static tf::TransformBroadcaster br;
     tf::Transform part_transform;
 
-    //Here in the tf::Vector3(x,y,z) x,y, and z should be calculated based on the pointcloud filtering results
-    part_transform.setOrigin( tf::Vector3(sor_cloud_filtered->at(1).x, sor_cloud_filtered->at(1).y, sor_cloud_filtered->at(1).z) );
+    // Calculate Centroid Largest PointCloud Cluster
+    Eigen::Vector4f xyz_centroid;
+    pcl::compute3DCentroid( *largest_cluster, xyz_centroid );
+    
+    part_transform.setOrigin( tf::Vector3( xyz_centroid[0] , xyz_centroid[1], xyz_centroid[2] ) );
     tf::Quaternion q;
     q.setRPY(0, 0, 0);
     part_transform.setRotation(q);
@@ -243,15 +251,15 @@ int main( int argc, char *argv[] )
     /* ========================================
      * Fill Code: POLYGONAL SEGMENTATION (OPTIONAL)
      * ========================================*/
-
-
+    
+    
     /* ========================================
      * CONVERT POINTCLOUD PCL->ROS
      * PUBLISH CLOUD
      * Fill Code: UPDATE AS NECESSARY
      * ========================================*/
     sensor_msgs::PointCloud2::Ptr pc2_cloud (new sensor_msgs::PointCloud2);
-    pcl::toROSMsg( *(clusters.at(0)), *pc2_cloud );
+    pcl::toROSMsg( *largest_cluster, *pc2_cloud );
     pc2_cloud->header.frame_id=world_frame;
     pc2_cloud->header.stamp=ros::Time::now();
     object_pub.publish(pc2_cloud);

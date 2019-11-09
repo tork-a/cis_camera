@@ -118,7 +118,7 @@
           output="screen" >
       <remap from="~input" to="/$(arg camera)/voxel_grid/output" />
       <rosparam>
-          mean_k: 20
+          mean_k: 16
           stddev: 0.5
       </rosparam>
     </node>
