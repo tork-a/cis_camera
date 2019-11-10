@@ -21,6 +21,8 @@
   <build_depend>rostest</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>opencv2</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>tf</build_depend>
   
   <build_export_depend>roscpp</build_export_depend>
   
@@ -36,6 +38,8 @@
   <exec_depend>jsk_rviz_plugins</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>opencv2</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
+  <exec_depend>tf</exec_depend>
   
   <test_depend>roslaunch</test_depend>
   <test_depend>rostest</test_depend>
