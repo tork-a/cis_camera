@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>cis_camera</name>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <description>The cis_camera package</description>
   
   <maintainer email="yamamoto.yosuke@opensource-robotics.tokyo.jp">Yosuke Yamamoto</maintainer>
