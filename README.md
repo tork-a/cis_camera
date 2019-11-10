@@ -77,6 +77,26 @@ $ roslaunch cis_camera pointcloud.launch reconfigure:=false
 
 <img src="doc/images/ros_cis_camera_rqt_reconfigure_20190923.png" style="width: 50%;" />
 
+#### Launch Options and Default Values of pointcloud.launch
+
+- `rviz:=true`
+    - Launching RViz 
+- `reconfigure:=true`
+    - Launching Dynamic Reconfigure
+- `camera:=camera`
+    - Name of cis_camera for ROS nodes and topics
+- `num_worker_threads:=4`
+    - Number of threads
+- `vendor:=0x2af2`
+    - Vendor ID of cis_camera
+- `product:=0x1001`
+    - Product ID of cis_camera
+- `pointcloud_rgb:=false`
+    - Projecting RGB colors on the pointcloud
+- `flying_pixel_filter:=false`
+    - Applying flying pixel filter with PCL `VoxelGrid` and `StatisticalOutlierRemoval` filters
+
+
 ### Publishing Images Only
 
 When you publish only Depth, IR and RGB images, launch `tof.launch`.
@@ -128,6 +148,32 @@ To find out what topics exits,
 $ source ~/camera_ws/devel/setup.bash
 $ rostopic list
 ```
+
+### Point Clud Library (PCL) Sample program
+
+**Terminal 1**
+```
+$ source ~/camera_ws/devel/setup.bash
+$ roslaunch cis_camera pointcloud.launch
+```
+
+**Terminal 2**
+```
+$ source ~/camera_ws/devel/setup.bash
+$ rosrun cis_camera pcl_example
+```
+
+This PCL example code extracts a target object by filtering the point cloud, 
+calculates the centroid of the extracted point cloud and publishes a TF on the centroid.
+
+![PCL Example](doc/images/cis-camera_pcl-example_object-tf_clipped.png)
+
+This example is based on "Building a Perception Pipleline" of ROS Industrial Training.
+
+* https://industrial-training-master.readthedocs.io/en/melodic/_source/session5/Building-a-Perception-Pipeline.html
+* https://industrial-training-master.readthedocs.io/en/kinetic/_source/session5/Building-a-Perception-Pipeline.html
+* https://industrial-training-jp.readthedocs.io/ja/latest/_source/session5_JP/Building-a-Perception-Pipeline_JP.html
+
 
 ### Quit Software
 
