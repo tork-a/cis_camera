@@ -70,7 +70,7 @@ When you do not need to launch `rqt_reconfigure`,
 please set a launch option as below.
 
 ```
-$ roslaunch cis_camera pointcloud.launch reconfigure:=true
+$ roslaunch cis_camera pointcloud.launch reconfigure:=false
 ```
 
 ![RViz PointCloud.launch](doc/images/ros_cis_camera_rviz-pointcloud_20190923.png)
