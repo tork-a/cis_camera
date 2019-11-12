@@ -86,18 +86,18 @@ if(CATKIN_ENABLE_TESTING)
   
   find_package(catkin REQUIRED COMPONENTS rostest roslaunch)
   
-#  file(GLOB LAUNCH_FILES launch/*.launch)
-#  foreach(LAUNCH_FILE ${LAUNCH_FILES})
-#    message(status "Testing ${LAUNCH_FILE}")
-#    roslaunch_add_file_check(${LAUNCH_FILE})
-#  endforeach()
-  
-  file(GLOB TEST_FILES test/*.test)
-  foreach(TEST_FILE ${TEST_FILES})
-    message(status "Testing ${TEST_FILE}")
-    add_rostest(${TEST_FILE})
+  file(GLOB LAUNCH_FILES launch/*.launch)
+  foreach(LAUNCH_FILE ${LAUNCH_FILES})
+    message(status "Testing ${LAUNCH_FILE}")
+    roslaunch_add_file_check(${LAUNCH_FILE})
   endforeach()
   
+  # file(GLOB TEST_FILES test/*.test)
+  # foreach(TEST_FILE ${TEST_FILES})
+  #   message(status "Testing ${TEST_FILE}")
+  #   add_rostest(${TEST_FILE})
+  # endforeach()
+
 endif()
 
 
