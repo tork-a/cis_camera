@@ -1,3 +1,5 @@
+cis_camera [![Build Status](https://travis-ci.com/tork-a/cis_camera.svg?branch=master)](https://travis-ci.org/tork-a/cis_camera)
+
 # Quick Start
 
 ## System Configurations
