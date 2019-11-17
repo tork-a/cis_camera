@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   pcl_ros
   tf
+  tf_conversions
 )
 find_package(OpenCV)
 
@@ -36,6 +37,7 @@ catkin_package(
     cv_bridge
     pcl_ros
     tf
+    tf_conversions
   LIBRARIES
     cis_camera_nodelet
 )
