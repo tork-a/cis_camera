@@ -83,10 +83,14 @@
 #include <libuvc/libuvc.h>
 #include <math.h>
 
-
 namespace cis_camera
 {
 
+/**
+ * @brief CameraDriver is a constructor of the CameraDriver class.
+ * @param nh is a ROS node handler.
+ * @param priv_nh is a ROS private node handler.
+ */
 CameraDriver::CameraDriver( ros::NodeHandle nh, ros::NodeHandle priv_nh ) :
     nh_(nh),
     priv_nh_(priv_nh),
@@ -108,6 +112,9 @@ CameraDriver::CameraDriver( ros::NodeHandle nh, ros::NodeHandle priv_nh ) :
 }
 
 
+/**
+ * @brief ~CameraDriver destroys dev_ devh_ and so on for destructiion of the CameraDriver class.
+ */
 CameraDriver::~CameraDriver()
 {
   if ( rgb_frame_ )
@@ -118,6 +125,9 @@ CameraDriver::~CameraDriver()
 }
 
 
+/**
+ * @brief readConfigFromParameterServer reads camera infomations from the ROS parameter server.
+ */
 void CameraDriver::readConfigFromParameterServer()
 {
   int err;
@@ -129,6 +139,9 @@ void CameraDriver::readConfigFromParameterServer()
 }
 
 
+/**
+ * @brief advertiseROSTopics advertises topic publishers for images and temperatures.
+ */
 void CameraDriver::advertiseROSTopics()
 {
   // Remapping namespaces
@@ -156,6 +169,11 @@ void CameraDriver::advertiseROSTopics()
 }
 
 
+/**
+ * @brief Start initialize the CIS Tof Camera Sensora as a uvc
+ * and set a callback function for dynamic reconfigure.
+ * @return State of the uvc status.
+ */
 bool CameraDriver::Start()
 {
   uvc_error_t err;
@@ -176,6 +194,10 @@ bool CameraDriver::Start()
 }
 
 
+/**
+ * @brief Stop performs as the camera driver stops.
+ * @return State of the uvc status.
+ */
 void CameraDriver::Stop()
 {
   boost::recursive_mutex::scoped_lock( mutex_ );
@@ -190,6 +212,10 @@ void CameraDriver::Stop()
 }
 
 
+/**
+ * @brief ReconfiureCallback is a callback method for a dynamic reconfigure.
+ * This method sets camera paremeters with the setToFMode_ROSParameter method.
+ */
 void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t level )
 {
   boost::recursive_mutex::scoped_lock( mutex_ );
@@ -279,6 +305,11 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
 }
 
 
+/**
+ * @brief cvtDoubleToByte converts double type value to 0-255 limited integer.
+ * @param x double value to convert
+ * @return uint8_t of the limited integer
+ */
 uint8_t cvtDoubleToByte( double x )
 {
   if ( x < 0 )        return 0;
@@ -287,6 +318,15 @@ uint8_t cvtDoubleToByte( double x )
   return static_cast<uint8_t>( x );
 }
 
+/**
+ * @brief ImageCallback is a method to process a camera image.
+ * This method disassembles the whole one image in *frame to a color image, 
+ * an IR image and a depth image. The color image is converted from yuv422 data
+ * to bgr8 data. The depth data is converted from the distances from the camera
+ * element to the distances from the camera plane.
+ * The images are published as ROS sensor_msgs::Image topics.
+ * @param *frame uvc_frame_t image frame pointer of RGB/IR/Depth combined data
+ */
 void CameraDriver::ImageCallback( uvc_frame_t *frame )
 {
   ros::Time timestamp = ros::Time( frame->capture_time.tv_sec, frame->capture_time.tv_usec );
@@ -574,6 +614,12 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
 }
 
 
+/**
+ * @brief ImageCallbackAdapter is a callback method for the camera image.
+ * This method calls ImageCallback method to process a camera image.
+ * @param *frame uvc_frame_t pointer of image frame
+ * @param *ptr void pointer of this camera driver
+ */
 void CameraDriver::ImageCallbackAdapter( uvc_frame_t *frame, void *ptr )
 {
   CameraDriver *driver = static_cast<CameraDriver*>(ptr);
@@ -582,6 +628,9 @@ void CameraDriver::ImageCallbackAdapter( uvc_frame_t *frame, void *ptr )
 }
 
 
+/**
+ * @breif Opening and setting up a Tof camera.
+ */
 void CameraDriver::OpenCamera()
 {
   int err;
@@ -748,6 +797,13 @@ void CameraDriver::OpenCamera()
 }
 
 
+/**
+ * @brief setCameraCtrl sets a camera control using uvc control.
+ * @param ctrl uint8_t a control number
+ * @param *data uint16_t pointer for data to set
+ * @param size int a size of the data to set
+ * @return int of ther result of uvc_set_ctrl
+ */
 int CameraDriver::setCameraCtrl( uint8_t ctrl, uint16_t *data ,int size )
 {
   int err;
@@ -761,6 +817,13 @@ int CameraDriver::setCameraCtrl( uint8_t ctrl, uint16_t *data ,int size )
 }
 
 
+/**
+ * @brief getCameraCtrl gets a camera control using uvc control.
+ * @param ctrl uint8_t a control number
+ * @param *data uint16_t pointer for data to get
+ * @param size int a size of the data to get
+ * @return int of the result of uvc_get_ctrl
+ */
 int CameraDriver::getCameraCtrl( uint8_t ctrl, uint16_t *data, int size )
 {
   int err;
@@ -783,7 +846,10 @@ int CameraDriver::getCameraCtrl( uint8_t ctrl, uint16_t *data, int size )
   return err;
 }
 
-
+/**
+ * @brief setToFMode_All sets all ToF parameters with getting ROS parameters
+ * @return int of the result
+ */
 int CameraDriver::setToFMode_All()
 {
   int err;
@@ -831,7 +897,12 @@ int CameraDriver::setToFMode_All()
   return err;
 }
 
-
+/**
+ * @brief setToFMode_ROSParameter sets a integer Tof parameter converted from double parameter.
+ * @param param_name std::string Parameter name
+ * @param param double Parameter datum
+ * @return int of the result
+ */
 int CameraDriver::setToFMode_ROSParameter( std::string param_name, double param )
 {
   int err      = 0;
@@ -860,6 +931,12 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, double param 
   return err;
 }
 
+/**
+ * @brief setToFMode_ROSParameter sets 1 integer Tof parameter with setting 0 for the 2nd datum.
+ * @param param_name std::string Parameter name
+ * @param param int Parameter datum
+ * @return int of the result
+ */
 int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param )
 {
   int err;
@@ -868,6 +945,13 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param )
   return err;
 }
 
+/**
+ * @brief setToFMode_ROSParameter sets 2 integer Tof parameters.
+ * @param param_name std::string Parameter name
+ * @param param int Parameter datum
+ * @param param2 int Parameter datum
+ * @return int of the result
+ */
 int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param, int param_2 )
 {
   uint8_t ctrl = UVC_XU_CTRL_TOF;
@@ -1038,7 +1122,11 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param, in
   return err;
 }
 
-
+/**
+ * @brief setToFEEPROMMode sets EEPROM mode of the Tof camera sensor.
+ * @param mode uint16_t EEPROM mode
+ * @return int of the result
+ */
 int CameraDriver::setToFEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1068,6 +1156,10 @@ int CameraDriver::setToFEEPROMMode( uint16_t mode = TOF_EEPROM_FACTORY_DEFAULT )
 }
 
 
+/**
+ * @brief clearToFError clears errors of the Tof camera sensor.
+ * @return int of the result
+ */
 int CameraDriver::clearToFError()
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1089,6 +1181,9 @@ int CameraDriver::clearToFError()
 }
 
 
+/**
+ * @brief getToFInfo_All gets all ToF informations from the camera.
+ */
 void CameraDriver::getToFInfo_All()
 {
   int tof_err;
@@ -1150,28 +1245,13 @@ void CameraDriver::getToFInfo_All()
   return;
 }
 
-#if 0
-int CameraDriver::getToFDepthIR( uint16_t& depth_ir )
-{
-  uint8_t  ctrl    = UVC_XU_CTRL_TOF;
-  uint16_t data[5] = { TOF_GET_DEPTH_IR, 0, 0, 0, 0 };
-  int err;
-  
-  err = getCameraCtrl( ctrl, data, sizeof(data) );
-  if ( err == sizeof(data) )
-  {
-    depth_ir = data[1];
-    ROS_INFO( "Get Depth/IR Mode : %d", depth_ir );
-  }
-  else
-  {
-    ROS_ERROR( "Get Depth IR Mode failed. Error : %d", err );
-  }
-  
-  return err;
-}
-#endif
 
+/**
+ * @brief getToFDepthRange gets the depth range of the ToF camera sensor.
+ * @param depth_range uint16_t& Depth Range
+ * @param dr_index uint16_t& Depth Index
+ * @return int of the result
+ */
 int CameraDriver::getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1194,6 +1274,11 @@ int CameraDriver::getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index )
 }
 
 
+/**
+ * @brief getToFThreshold gets the threshold of the ToF camera sensor.
+ * @param threshold uint16_t& Threshold
+ * @return int of the result
+ */
 int CameraDriver::getToFThreshold( uint16_t& threshold )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1215,6 +1300,11 @@ int CameraDriver::getToFThreshold( uint16_t& threshold )
 }
 
 
+/**
+ * @brief getToFNRFilter gets the NR filter of the Depth/IR camera.
+ * @param nr_filter uint16_t& NR Filter ON/OFF
+ * @return int of the result
+ */
 int CameraDriver::getToFNRFilter( uint16_t& nr_filter )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1236,6 +1326,11 @@ int CameraDriver::getToFNRFilter( uint16_t& nr_filter )
 }
 
 
+/**
+ * @brief getToFPulseCount gets the pulse count of the ToF camera sensor.
+ * @param pluse_count uint16_t& Pulse count
+ * @return int of the result
+ */
 int CameraDriver::getToFPulseCount( uint16_t& pulse_count )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1257,6 +1352,11 @@ int CameraDriver::getToFPulseCount( uint16_t& pulse_count )
 }
 
 
+/**
+ * @brief getToFLDEnable gets the LD enable configurations of the ToF camera sensor.
+ * @param pluse_count uint16_t& LD enable configurations
+ * @return int of the result
+ */
 int CameraDriver::getToFLDEnable( uint16_t& ld_enable_near, uint16_t& ld_enable_wide )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1279,6 +1379,11 @@ int CameraDriver::getToFLDEnable( uint16_t& ld_enable_near, uint16_t& ld_enable_
 }
 
 
+/**
+ * @brief getToFDepthCnvGain gets the depth conversion gain of ToF camera sensor.
+ * @param depth_cnv_gain uint16_t& Depth conversion gain
+ * @return int of the result
+ */
 int CameraDriver::getToFDepthCnvGain( double& depth_cnv_gain )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1299,6 +1404,14 @@ int CameraDriver::getToFDepthCnvGain( double& depth_cnv_gain )
 }
 
 
+/**
+ * @brief getToFDepthInfo gets the depth informations of the ToF camera sensor.
+ * @param depth_offset short& Depth offset value data
+ * @param max_data unsigned short& Maximum data
+ * @param min_dist unsigned short& Minimum distance [mm]
+ * @param max_dist unsigned short& Maximum distance [mm]
+ * @return int of the result
+ */
 int CameraDriver::getToFDepthInfo( short&          depth_offset,
                                    unsigned short& max_data,
                                    unsigned short& min_dist,
@@ -1325,6 +1438,11 @@ int CameraDriver::getToFDepthInfo( short&          depth_offset,
 }
 
 
+/**
+ * @brief getToFIRGain gets the IR gain of the Depth/IR camera.
+ * @param ir_gain uint16_t& IR gain
+ * @return int of the result
+ */
 int CameraDriver::getToFIRGain( uint16_t& ir_gain )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1346,6 +1464,12 @@ int CameraDriver::getToFIRGain( uint16_t& ir_gain )
 }
 
 
+/**
+ * @brief getToFTemperature gets the temperature data of the ToF camera sensor.
+ * @param t1 double& Temperature data [deg C]
+ * @param t2 double& Temperature data [deg C]
+ * @return int of the result
+ */
 int CameraDriver::getToFTemperature( double& t1, double& t2 )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1367,6 +1491,12 @@ int CameraDriver::getToFTemperature( double& t1, double& t2 )
 }
 
 
+/**
+ * @brief getToFLDPulseWidth gets the pulse width of the ToF camera sensor.
+ * @param time_near int& Pulse width time for the near mode [ns]
+ * @param time_wide int& Pulse width time for the wide mode [ns]
+ * @return int of the result
+ */
 int CameraDriver::getToFLDPulseWidth( int& time_near, int& time_wide )
 {
   uint8_t  ctrl    = UVC_XU_CTRL_TOF;
@@ -1388,6 +1518,14 @@ int CameraDriver::getToFLDPulseWidth( int& time_near, int& time_wide )
 }
 
 
+/**
+ * @brief getToFVersion gets the version informations of the ToF camera sensor.
+ * @param version_n uint16_t& Major and minor version data
+ * @param build_n uint16_t& Build number
+ * @param build_y uint16_t& Build year
+ * @param build_d uint16_t& Build date
+ * @return int of the result
+ */
 int CameraDriver::getToFVersion( uint16_t& version_n,
                                  uint16_t& build_n,
                                  uint16_t& build_y,
@@ -1416,6 +1554,14 @@ int CameraDriver::getToFVersion( uint16_t& version_n,
 }
 
 
+/**
+ * @brief getToFErrorInfo gets the error informations of the ToF camera sensor.
+ * @param common_err uint16_t& Errors
+ * @param eeprom_err_factory uint16_t& Not used now, used in old versions
+ * @param eeprom_err uint16_t& Not used now, used in old versions
+ * @param mipi_temp_err uint16_t& Not used now, used in old versions
+ * @return int of the result
+ */
 int CameraDriver::getToFErrorInfo( uint16_t& common_err,
                                    uint16_t& eeprom_err_factory,
                                    uint16_t& eeprom_err,
@@ -1444,6 +1590,9 @@ int CameraDriver::getToFErrorInfo( uint16_t& common_err,
 }
 
 
+/**
+ * @brief getRGBInfo_All gets all informations of the RGB camera.
+ */
 void CameraDriver::getRGBInfo_All()
 {
   int err;
@@ -1465,6 +1614,12 @@ void CameraDriver::getRGBInfo_All()
   return;
 }
 
+
+/**
+ * @brief getRGBAEMode gets the Auto Exposure mode of the RGB camera.
+ * @param ae_mode uint16_t& AE mode
+ * @return int of the result
+ */
 int CameraDriver::getRGBAEMode( uint16_t& ae_mode )
 {
   int err;
@@ -1486,6 +1641,12 @@ int CameraDriver::getRGBAEMode( uint16_t& ae_mode )
   return err;
 }
 
+/**
+ * @brief getRGBBrightnessGain gets the brightness gain of the RGB camera.
+ * @param brightness_gain double& Brightness gain
+ * @param brightness_maxg double& Brightness maximum gain
+ * @return int of the result
+ */
 int CameraDriver::getRGBBrightnessGain( double& brightness_gain,  double& brightness_maxg )
 {
   int err;
@@ -1512,6 +1673,12 @@ int CameraDriver::getRGBBrightnessGain( double& brightness_gain,  double& bright
   return err;
 }
 
+/**
+ * @brief getRGBShutterControl gets the shutter control time of the RGB camera.
+ * @param exposure_time double& Shutter exposure time [s]
+ * @param exposure_maxt double& Shutter exposure maximum time [s]
+ * @return int of the result
+ */
 int CameraDriver::getRGBShutterControl( double& exposure_time, double& exposure_maxt )
 {
   int err;
@@ -1538,6 +1705,11 @@ int CameraDriver::getRGBShutterControl( double& exposure_time, double& exposure_
   return err;
 }
 
+/**
+ * @brief getRGBColorCorrection gets the color correction mode of the RGB camera.
+ * @param color_correction uint16_t& Color correction mode Off: 0 / Standard: 1
+ * @return int of the result
+ */
 int CameraDriver::getRGBColorCorrection( uint16_t& color_correction )
 {
   int err;
@@ -1559,7 +1731,10 @@ int CameraDriver::getRGBColorCorrection( uint16_t& color_correction )
   return err;
 }
 
-
+/**
+ * @brief TemperatureCallback is a callback method to get and publish temperature data.
+ * @param ptr void* pointer for this driver
+ */
 void CameraDriver::TemperatureCallback( void* ptr )
 {
   boost::recursive_mutex::scoped_lock( mutex_ );
@@ -1572,6 +1747,9 @@ void CameraDriver::TemperatureCallback( void* ptr )
 }
 
 
+/**
+ * @brief publishToFTemperature gets and publishes temperature data of the Tof camera sensor.
+ */
 void CameraDriver::publishToFTemperature()
 {
   std::string frame_id;
@@ -1597,6 +1775,9 @@ void CameraDriver::publishToFTemperature()
 }
 
 
+/**
+ * @brief CloseCamera closes the ToF camera sensor.
+ */
 void CameraDriver::CloseCamera()
 {
   uvc_close( devh_ );
