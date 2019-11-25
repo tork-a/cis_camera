@@ -76,14 +76,6 @@
     
     <arg name="manager" value="$(arg camera)_nodelet_manager"/>
     
-<!--
-    <include file="$(find rgbd_launch)/launch/includes/manager.launch.xml">
-      <arg name="name"                value="$(arg manager)" />
-      <arg name="debug"               value="$(arg debug)" />
-      <arg name="num_worker_threads"  value="$(arg num_worker_threads)" />
-    </include>
--->
-    
     <node pkg="nodelet" type="nodelet" args="manager"
           name="$(arg manager)" output="screen" launch-prefix="$(arg launch_prefix)" >
       <param name="num_worker_threads" value="$(arg num_worker_threads)" />
