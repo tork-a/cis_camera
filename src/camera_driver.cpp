@@ -289,7 +289,7 @@ uint8_t cvtDoubleToByte( double x )
 
 void CameraDriver::ImageCallback( uvc_frame_t *frame )
 {
-  ros::Time timestamp = ros::Time( frame->capture_time.tv_sec, frame->capture_time.tv_usec );
+  ros::Time timestamp = ros::Time( frame->capture_time.tv_sec, frame->capture_time.tv_usec * 1000 );
   if ( timestamp == ros::Time(0) )
   {
     timestamp = ros::Time::now();
@@ -331,7 +331,8 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   sensor_msgs::Image::Ptr image( new sensor_msgs::Image() );
   image->width  = frame_width;
   image->height = frame_height;
-  image->step   = image->width * 3;
+//  image->step   = image->width * 3;
+  image->step   = image->width * 2;
   image->data.resize( image->step * image->height );
   
   sensor_msgs::Image::Ptr image_bgr8( new sensor_msgs::Image() );
@@ -354,12 +355,18 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   
   if ( frame->frame_format == UVC_FRAME_FORMAT_GRAY16 )
   {
+    if ( frame->data_bytes != ( frame_width * frame_height * sizeof(uint16_t) ) )
+    {
+      ROS_WARN( "Image Frame: Unexpected Data Size - Skip this frame." );
+      return;
+    }
+    
     image->encoding = "16UC1";
     image->step     = image->width * 2;
     image->data.resize( image->step * image->height );
     memcpy( &(image->data[0]), frame->data, frame->data_bytes );
     
-    uint16_t* data = reinterpret_cast<uint16_t*>( &image->data[0] );
+    uint16_t* data = reinterpret_cast<uint16_t*>( &(image->data[0]) );
     
     // Cropping Color Image Frame
     int color_height = frame_height;
@@ -431,7 +438,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     image_ir->width  = depth_width;
     image_ir->height = depth_height;
     image_ir->step   = image_ir->width * 2;
-    image_ir->data.resize( image_depth->step * image_depth->height );
+    image_ir->data.resize( image_ir->step * image_ir->height );
     
     uint16_t ir_data[ depth_width * depth_height ];
     
@@ -475,8 +482,8 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       cinfo_ir->D[1] = k2;
       cinfo_ir->D[2] = p1;
       cinfo_ir->D[3] = p2;
+      cinfo_ir->D[4] = k3;
       
-      cinfo_depth->D[4] = k3;
       cinfo_depth->K[0] = fx;
       cinfo_depth->K[4] = fy;
       cinfo_depth->K[2] = cx;
@@ -503,7 +510,10 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     double xp, yp, x2, y2, r2, r4, r6, k0, s0;
     double xp_mod, yp_mod;
     
-    uint16_t depth_data_max = 0;
+    //uint16_t depth_data_max = 0;
+    
+    if ( fx <= 0 ) fx = depth_width / 2;
+    if ( fy <= 0 ) fy = depth_height / 2;
     
     for ( int i=0; i< depth_height; i++ )
     {
@@ -515,7 +525,7 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
         xp = ( j - cx ) / fx;
         x2 = xp * xp;
         
-        depth_data_max = depth_data[ i*depth_width + j ];
+        //depth_data_max = depth_data[ i*depth_width + j ];
         
         // Lens Distortion Correction
         r2  = x2 + y2;
@@ -525,7 +535,9 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
         xp_mod = xp * k0 + 2.0 * p1 * xp * yp + p2 * ( r2 + 2.0 * x2 );
         yp_mod = yp * k0 + 2.0 * p2 * xp * yp + p1 * ( r2 + 2.0 * y2 );
         
-        s0 = sqrt( xp_mod * xp_mod + yp_mod * yp_mod + 1.0 );
+        s0 = sqrt( fabs( xp_mod * xp_mod + yp_mod * yp_mod + 1.0 ) );
+        
+        if ( s0 <= 0 ) s0 = 1.0;
         
         depth_data[ i*depth_width + j ] = (uint16_t)( floor( ( depth_data[ i*depth_width + j ] * depth_cnv_gain_ * 4.0 + depth_offset_ ) / s0 + 0.5 ) );
         
@@ -570,7 +582,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   pub_depth_.publish( image_depth, cinfo_depth );
   pub_color_.publish( image_bgr8, cinfo_color );
   
-  return;
 }
 
 
