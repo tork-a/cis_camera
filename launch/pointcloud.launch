@@ -9,7 +9,7 @@
   <arg name="reconfigure" default="true" />
   
   <arg name="camera" default="camera" />
-  <arg name="num_worker_threads" default="32" />
+  <arg name="num_worker_threads" default="4" />
   
   <!-- Vendor and Product ID -->
   <arg name="vendor"  default="0x2af2" />
