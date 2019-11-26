@@ -357,7 +357,8 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   {
     if ( frame->data_bytes != ( frame_width * frame_height * sizeof(uint16_t) ) )
     {
-      ROS_WARN( "Image Frame: Unexpected Data Size - Skip this frame." );
+      ROS_WARN( "Image Frame: Unexpected Data Size (%ld Bytes) - Skip this frame."
+                , frame->data_bytes );
       return;
     }
     
