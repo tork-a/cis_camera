@@ -420,6 +420,35 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       bgr8_ptr += 6;
     }
     
+    // Camera Info. Dynamic Reconfigure
+    bool rgb_dist_reconfig;
+    priv_nh_.getParam( "rgb_dist_reconfig", rgb_dist_reconfig );
+    if( rgb_dist_reconfig )
+    {
+      double rgb_fx, rgb_fy, rgb_cx, rgb_cy;
+      double rgb_k1, rgb_k2, rgb_k3, rgb_p1, rgb_p2;
+      
+      priv_nh_.getParam( "rgb_fx", rgb_fx );
+      priv_nh_.getParam( "rgb_fy", rgb_fy );
+      priv_nh_.getParam( "rgb_cx", rgb_cx );
+      priv_nh_.getParam( "rgb_cy", rgb_cy );
+      priv_nh_.getParam( "rgb_k1", rgb_k1 );
+      priv_nh_.getParam( "rgb_k2", rgb_k2 );
+      priv_nh_.getParam( "rgb_k3", rgb_k3 );
+      priv_nh_.getParam( "rgb_p1", rgb_p1 );
+      priv_nh_.getParam( "rgb_p2", rgb_p2 );
+      
+      cinfo_color->K[0] = rgb_fx;
+      cinfo_color->K[4] = rgb_fy;
+      cinfo_color->K[2] = rgb_cx;
+      cinfo_color->K[5] = rgb_cy;
+      cinfo_color->D[0] = rgb_k1;
+      cinfo_color->D[1] = rgb_k2;
+      cinfo_color->D[2] = rgb_p1;
+      cinfo_color->D[3] = rgb_p2;
+      cinfo_color->D[4] = rgb_k3;
+    }
+
     // Cropping Depth and IR Image Frame
     int depth_width  = frame_width - color_width;
     int depth_height = frame_height / 2;
