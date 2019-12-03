@@ -1,0 +1,32 @@
+actions: []
+authors: ''
+brief: ''
+bugtracker: ''
+depends:
+- dynamic_reconfigure
+- roslaunch
+- catkin
+- roscpp
+- rqt_reconfigure
+- pluginlib
+- cv_bridge
+- camera_info_manager
+- sensor_msgs
+- libuvc
+- image_transport
+- jsk_rviz_plugins
+- rgbd_launch
+- rostest
+- rviz
+- tf
+- nodelet
+- tf_conversions
+- pcl_ros
+description: The cis_camera package
+license: BSD
+maintainers: Yosuke Yamamoto <yamamoto.yosuke@opensource-robotics.tokyo.jp>
+msgs: []
+package_type: package
+repo_url: ''
+srvs: []
+url: ''
