@@ -210,7 +210,6 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
     if ( new_config.depth_range != config_.depth_range )
     {
       setToFMode_ROSParameter( "depth_range", new_config.depth_range );
-      setToFMode_ROSParameter( "pulse_count", new_config.pulse_count );
     }
     
     if ( new_config.threshold != config_.threshold )
@@ -302,20 +301,19 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     return;
   }
   
-  if ( config_changed_ )
+  // Checking Depth Conversion Gain
+  if ( depth_cnv_gain_ <= 0.000001 )
   {
+    double dcg = depth_cnv_gain_;
     getToFDepthCnvGain( depth_cnv_gain_ );
+    ROS_WARN( "Wrong Depth Cnv Gain: %lf -> Re-get Depth Cnv Gain: %lf", dcg, depth_cnv_gain_ );
     
     unsigned short max_data;
     unsigned short min_dist;
     unsigned short max_dist;
     getToFDepthInfo( depth_offset_, max_data, min_dist, max_dist );
-    
-    config_server_.updateConfig( config_ );
-    config_changed_ = false;
-    
-    // Return to aquire a new image
-    return;
+    ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
+                depth_offset_, max_data, min_dist, max_dist );
   }
   
   int    err;
@@ -331,7 +329,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   sensor_msgs::Image::Ptr image( new sensor_msgs::Image() );
   image->width  = frame_width;
   image->height = frame_height;
-//  image->step   = image->width * 3;
   image->step   = image->width * 2;
   image->data.resize( image->step * image->height );
   
@@ -423,6 +420,35 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       bgr8_ptr += 6;
     }
     
+    // Camera Info. Dynamic Reconfigure
+    bool rgb_dist_reconfig;
+    priv_nh_.getParam( "rgb_dist_reconfig", rgb_dist_reconfig );
+    if( rgb_dist_reconfig )
+    {
+      double rgb_fx, rgb_fy, rgb_cx, rgb_cy;
+      double rgb_k1, rgb_k2, rgb_k3, rgb_p1, rgb_p2;
+      
+      priv_nh_.getParam( "rgb_fx", rgb_fx );
+      priv_nh_.getParam( "rgb_fy", rgb_fy );
+      priv_nh_.getParam( "rgb_cx", rgb_cx );
+      priv_nh_.getParam( "rgb_cy", rgb_cy );
+      priv_nh_.getParam( "rgb_k1", rgb_k1 );
+      priv_nh_.getParam( "rgb_k2", rgb_k2 );
+      priv_nh_.getParam( "rgb_k3", rgb_k3 );
+      priv_nh_.getParam( "rgb_p1", rgb_p1 );
+      priv_nh_.getParam( "rgb_p2", rgb_p2 );
+      
+      cinfo_color->K[0] = rgb_fx;
+      cinfo_color->K[4] = rgb_fy;
+      cinfo_color->K[2] = rgb_cx;
+      cinfo_color->K[5] = rgb_cy;
+      cinfo_color->D[0] = rgb_k1;
+      cinfo_color->D[1] = rgb_k2;
+      cinfo_color->D[2] = rgb_p1;
+      cinfo_color->D[3] = rgb_p2;
+      cinfo_color->D[4] = rgb_k3;
+    }
+
     // Cropping Depth and IR Image Frame
     int depth_width  = frame_width - color_width;
     int depth_height = frame_height / 2;
@@ -511,8 +537,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
     double xp, yp, x2, y2, r2, r4, r6, k0, s0;
     double xp_mod, yp_mod;
     
-    //uint16_t depth_data_max = 0;
-    
     if ( fx <= 0 ) fx = depth_width / 2;
     if ( fy <= 0 ) fy = depth_height / 2;
     
@@ -525,8 +549,6 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
       {
         xp = ( j - cx ) / fx;
         x2 = xp * xp;
-        
-        //depth_data_max = depth_data[ i*depth_width + j ];
         
         // Lens Distortion Correction
         r2  = x2 + y2;
@@ -785,7 +807,6 @@ int CameraDriver::getCameraCtrl( uint8_t ctrl, uint16_t *data, int size )
   }
   else
   {
-//    err = uvc_get_ctrl( devh_, ctrl, 0x03, data, size, UVC_GET_CUR );
     err = uvc_get_ctrl( devh_, 3, ctrl, data, size, UVC_GET_CUR );
     if ( err != size )
     {
@@ -1040,8 +1061,21 @@ int CameraDriver::setToFMode_ROSParameter( std::string param_name, int param, in
     return err;
   }
   
+  if ( param_name == "depth_range" )
+  {
+    getToFDepthCnvGain( depth_cnv_gain_ );
+    ROS_INFO( "Get Depth Cnv Gain : %f", depth_cnv_gain_ );
+    
+    unsigned short max_data;
+    unsigned short min_dist;
+    unsigned short max_dist;
+    getToFDepthInfo( depth_offset_, max_data, min_dist, max_dist );
+    ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
+                depth_offset_, max_data, min_dist, max_dist );
+  }
+  
   // Check the valid values on ToF Camera
-  if ( param_name == "pulse_count" )
+  if ( param_name == "pulse_count" || param_name == "depth_range" )
   {
     uint16_t pulse_count;
     getToFPulseCount( pulse_count );
@@ -1140,7 +1174,7 @@ void CameraDriver::getToFInfo_All()
   tof_err = getToFDepthInfo( depth_offset_, max_data, min_dist, max_dist );
   ROS_INFO( "Get Depth Info - Offset: %d / Max Data : %d / min Distance : %d [mm] MAX Distance :%d [mm]",
               depth_offset_, max_data, min_dist, max_dist );
-
+  
   uint16_t ir_gain;
   tof_err = getToFIRGain( ir_gain );
   
@@ -1324,9 +1358,9 @@ int CameraDriver::getToFDepthInfo( short&          depth_offset,
   if ( err == sizeof(data) )
   {
     depth_offset = *(short*)(&data[1]);
-    max_data   = *(unsigned short*)(&data[2]);
-    min_dist   = *(unsigned short*)(&data[3]);
-    max_dist   = *(unsigned short*)(&data[4]);
+    max_data     = (unsigned short)(data[2]);
+    min_dist     = (unsigned short)(data[3]);
+    max_dist     = (unsigned short)(data[4]);
   }
   else
   {
