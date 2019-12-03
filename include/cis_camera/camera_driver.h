@@ -194,7 +194,6 @@ private:
   int setToFEEPROMMode( uint16_t mode );
   int clearToFError();
   
-//  int getToFDepthIR( uint16_t& depth_ir );
   int getToFDepthRange( uint16_t& depth_range, uint16_t& dr_index );
   int getToFThreshold( uint16_t& threshold );
   int getToFNRFilter( uint16_t& nr_filter );

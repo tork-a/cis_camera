@@ -1,5 +1,10 @@
 <launch>
   
+  <!-- GDB functionality -->
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+  
   <arg name="rviz" default="true" />
   <arg name="reconfigure" default="true" />
   
@@ -38,6 +43,8 @@
   <!-- TOF camera launch -->
   <include file="$(find cis_camera)/launch/tof.launch" >
     
+    <arg name="launch_prefix" value="$(arg launch_prefix)" />
+    
     <!-- Vendor and Product ID -->
     <arg name="vendor"  value="$(arg vendor)"  />
     <arg name="product" value="$(arg product)" />
@@ -68,15 +75,13 @@
   <group ns="$(arg camera)">
     
     <arg name="manager" value="$(arg camera)_nodelet_manager"/>
-    <arg name="debug"   default="false" />
     
-    <include file="$(find rgbd_launch)/launch/includes/manager.launch.xml">
-      <arg name="name"                value="$(arg manager)" />
-      <arg name="debug"               value="$(arg debug)" />
-      <arg name="num_worker_threads"  value="$(arg num_worker_threads)" />
-    </include>
+    <node pkg="nodelet" type="nodelet" args="manager"
+          name="$(arg manager)" output="screen" launch-prefix="$(arg launch_prefix)" >
+      <param name="num_worker_threads" value="$(arg num_worker_threads)" />
+    </node>
     
-    <include file="$(find rgbd_launch)/launch/includes/processing.launch.xml">
+    <include file="$(find cis_camera)/launch/includes/processing.launch.xml">
       
       <arg name="manager"          value="$(arg manager)" />
       <arg name="respawn"          value="false" />
@@ -85,9 +90,9 @@
       <arg name="depth_processing" value="true" />
       
       <arg name="depth_registered_processing" value="$(arg pointcloud_rgb)" />
-      <arg name="hw_registered_processing"    value="$(arg pointcloud_rgb)" />
       <arg name="sw_registered_processing"    value="$(arg pointcloud_rgb)" />
       
+      <arg name="hw_registered_processing"        value="false" />
       <arg name="disparity_processing"            value="false" />
       <arg name="disparity_registered_processing" value="false" />
       
@@ -104,7 +109,7 @@
               from="~input" to="/$(arg camera)/depth_registered/points" />
       <rosparam>
           filter_field_name: z
-          filter_limit_min: 0.01
+          filter_limit_min: 0.015
           filter_limit_max: 6.0
           filter_limit_negative: False
           leaf_size: 0.01
@@ -118,8 +123,8 @@
           output="screen" >
       <remap from="~input" to="/$(arg camera)/voxel_grid/output" />
       <rosparam>
-          mean_k: 16
-          stddev: 0.5
+          mean_k: 30
+          stddev: 0.4
       </rosparam>
     </node>
     
@@ -130,7 +135,7 @@
   
   <!-- RViz -->
   <node if="$(arg rviz)"
-        name="rviz" pkg="rviz" type="rviz"
+        name="rviz" pkg="rviz" type="rviz" launch-prefix="$(arg launch_prefix)"
         args="-d $(find cis_camera)/launch/pointcloud.rviz"/>
   
   <!-- Dynamic Reconfigure-->

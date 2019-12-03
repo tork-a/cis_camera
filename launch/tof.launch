@@ -1,5 +1,8 @@
 <launch>
   
+  <!-- Launch Prefix -->
+  <arg name="launch_prefix" default="" />
+  
   <!-- Vendor and Product ID -->
   <arg name="vendor"  default="0x2af2" />
   <arg name="product" default="0x1001" />
@@ -26,7 +29,7 @@
   <arg name="temp_time" default="1.0" />
   
   <group ns="camera">
-    <node pkg="cis_camera" type="camera_node" name="cistof" >
+    <node pkg="cis_camera" type="camera_node" name="cistof" launch-prefix="$(arg launch_prefix)" >
       
       <!-- Parameters used to find the camera -->
       <!--
