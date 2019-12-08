@@ -1,11 +1,17 @@
-cis\_camera
-===========
 
-This package contains ROS driver nodes for CIS Corporation ToF Camera
+###########
+ cis_camra
+###########
+
+==========
+ Overview
+==========
+
+This cis_camera package contains ROS driver nodes for CIS Corporation ToF Camera
 Sensor DCC-RGBD1 with USB 3.0 interface.
 
 System Configurations
----------------------
+=====================
 
 -  OS / ROS
 
@@ -16,7 +22,7 @@ System Configurations
 -  CIS ToF Camera Sensor DCC-RGBD1
 
 CIS ToF Camera Sensor DCC-RGBD1
--------------------------------
+===============================
 
 -  Camera system
 
@@ -65,16 +71,14 @@ CIS ToF Camera Sensor DCC-RGBD1
    :alt: CIS ToF Camera
    :width: 50%
    
-   Fig. CIS ToF Camera : DCC-RGBD1
+   CIS ToF Camera : DCC-RGBD1
 
-Quick Start
-===========
-
-Installations
--------------
+===============
+ Installations
+===============
 
 Install ROS
-~~~~~~~~~~~~~~
+=============
 
 Install "ROS Desktop Full" on Ubuntu PC.
 
@@ -86,14 +90,14 @@ Install "ROS Desktop Full" on Ubuntu PC.
 
    -  http://wiki.ros.org/melodic/Installation/Ubuntu
 
-Install cis\_camera package
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install cis\_camera Package
+=============================
 
 -  **NOTE** : Replase ``$ROS_DISTRO`` to the ROS distribution of your
    system, ``kinetic`` or ``melodic``.
 
 Install cis\_camera package from a debian package
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------------------------
 
 - **NOTE** : The debian package is in preparation and will be available around January 2020.
 
@@ -103,7 +107,7 @@ Install cis\_camera package from a debian package
     $ sudo apt-get install ros-$ROS_DISTRO-cis-camera
 
 Install cis\_camera package from source codes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------------
 
 ::
 
@@ -130,8 +134,12 @@ with entering sudo password in responce to program input.
 
 -  **NOTE** : This process is needed only once after the installations on your Ubuntu PC.
 
+==========================
+ Launching CIS ToF Camera
+==========================
+
 Connecting Camera
------------------
+===================
 
 1. Connect the camera to the USB 3.0 port of your Ubuntu PC
 2. Connect the external power source to the camera and turn it on
@@ -140,10 +148,10 @@ Connecting Camera
    normally after the external power is turned on.
 
 Launching Software
-------------------
+====================
 
 Set up ROS Environment
-~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 Execute ROS environment setup every time you launch a new terminal.
 
@@ -174,7 +182,7 @@ Or set .bashrc as below when you installed cis\_camera package from source codes
 - **NOTE** : DO NOT set ``>>`` to ``>`` in the above command! If you set ``>``, all the settings in the original .bashrc will be lost.
 
 PointCloud
-~~~~~~~~~~
+------------
 
 To see the pointcloud with RViz.
 
@@ -203,7 +211,7 @@ option as below.
    Fig. Dynamic Reconfigure
 
 Launch Options and Default Values of pointcloud.launch
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 -  ``rviz:=true``
 
@@ -245,7 +253,7 @@ Launch Options and Default Values of pointcloud.launch
    Fig. PointCloud with RGB Color Projection
 
 Point Cloud Library (PCL) Sample Program
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------
 
 **Terminal 1**
 
@@ -277,15 +285,15 @@ Industrial Training.
 -  https://industrial-training-jp.readthedocs.io/ja/latest/_source/session5_JP/Building-a-Perception-Pipeline_JP.html
 
 Quit Software
-~~~~~~~~~~~~~
+-------------
 
 Enter ``Ctrl-C`` on the running terminal.
 
-Other Launch and Run Tips
--------------------------
+Launch and Run Tips
+===================
 
 Publishing Images Only
-~~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 When you publish only Depth, IR and RGB images, launch ``tof.launch`` .
 
@@ -301,7 +309,7 @@ If you show the images, run ``rqt`` and open Plugins -> Visualization -> Image V
 
 
 Dynamic Reconfigure
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 After you launched ``pointcloud.launch reconfigure:=false`` or
 ``tof.launch``, you can also reconfigure Depth/IR configurations
@@ -325,7 +333,7 @@ To set back the parameters to ``config/camera_ir.yaml`` data, uncheck
    Fig. IR Distortion Reconfigure
 
 Frame Rate
-~~~~~~~~~~
+----------
 
 When you want to know a frame rate of ROS topic, please run
 ``rostopic hz`` as below.
@@ -342,14 +350,15 @@ To find out what topics exits,
 
     $ rostopic list
 
-Reference
-=========
+===========
+ Reference
+===========
 
-CIS TOF Camera Specific Topics
-------------------------------
+CIS TOF Camera ROS Driver Specific Topics
+===========================================
 
 Depth Image Topic
-^^^^^^^^^^^^^^^^^
+-------------------
 
 -  /camera/depth/image\_raw
 -  Type : sensor\_msgs/Image
@@ -365,7 +374,7 @@ Depth Image Topic
 -  /camera/depth/image\_rect\_raw
 
 IR Image Topic
-^^^^^^^^^^^^^^
+----------------
 
 -  /camera/ir/image\_raw
 -  Type : sensor\_msgs/Image
@@ -380,7 +389,7 @@ IR Image Topic
 -  /camera/ir/image\_rect
 
 RGB Image Topic
-^^^^^^^^^^^^^^^
+-----------------
 
 -  /camera/rgb/image\_raw
 -  Type : sensor\_msgs/Image
@@ -395,17 +404,20 @@ RGB Image Topic
 -  /camera/rgb/image\_rect\_color
 
 Point Cloud Topic
-^^^^^^^^^^^^^^^^^
+-------------------
 
 -  /camera/depth/points
 -  Type: sensor\_msgs/PointCloud2
 -  Publisher : /camera/camera\_nodelet\_manager
 
 CIS TOF Camera Specific Parameters
-----------------------------------
+====================================
+
+Depth / IR Parameters
+-----------------------
 
 depth\_range
-^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Depth Range
 
@@ -420,7 +432,7 @@ depth\_range
 -  Default : 0
 
 threshold
-^^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Coring Threshold
 
@@ -434,7 +446,7 @@ threshold
 -  Default : 0
 
 nr\_filter
-^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Noise Reduction Filter ON/OFF
 -  Value
@@ -445,7 +457,7 @@ nr\_filter
 -  Default : 1
 
 pulse\_count
-^^^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Number of light emitting pulses per frame
 
@@ -459,7 +471,7 @@ pulse\_count
 -  Default : 2000
 
 ld\_enable
-^^^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Enable LEDs
 
@@ -474,7 +486,7 @@ ld\_enable
 -  Default : 3
 
 ir\_gain
-^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  IR Gain
 -  Value
@@ -485,7 +497,7 @@ ir\_gain
 -  Default : 256
 
 ae\_mode
-^^^^^^^^
+~~~~~~~~~~~~~~
 
 -  Auto exposure mode
 -  Value
@@ -497,8 +509,11 @@ ae\_mode
 
 -  Default : 3
 
+RGB Camera Prameters
+----------------------
+
 color\_correction
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 -  Color correction Mode
 -  Value
@@ -509,7 +524,7 @@ color\_correction
 -  Default : 0
 
 brightness\_gain
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 -  RGB brightness gain
 -  Value
@@ -520,7 +535,7 @@ brightness\_gain
 -  Default : 1.0
 
 exposure\_time
-^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 -  RGB exposure time (shutter control)
 -  Value
@@ -531,7 +546,7 @@ exposure\_time
 -  Default : 0.01
 
 How to Change Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 To change the parameters,
 
@@ -553,13 +568,13 @@ files extecuted, use ``--screen`` option as below.
     $ roslaunch cis_camera pointcloud.launch --screen
 
 Launch Files
-------------
+============
 
 tof.launch
-~~~~~~~~~~
+----------
 
 Nodes
-^^^^^
+~~~~~~~~~~
 
 ::
 
@@ -573,7 +588,7 @@ Nodes
 
 
 Topics
-^^^^^^
+~~~~~~~~~~
 
 ::
 
@@ -631,7 +646,7 @@ Topics
     /tf
 
 Parameters
-^^^^^^^^^^
+~~~~~~~~~~
 
 ::
 
@@ -733,10 +748,10 @@ Parameters
     /run_id
 
 pointcloud.launch
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Nodes
-^^^^^
+~~~~~~~~~~
 
 ::
 
@@ -761,7 +776,7 @@ Nodes
     /rviz
 
 Topics
-^^^^^^
+~~~~~~~~~~
 
 ::
 
@@ -915,7 +930,7 @@ Topics
     /tf_static
 
 Parameters
-^^^^^^^^^^
+~~~~~~~~~~
 
 ::
 

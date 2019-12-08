@@ -74,7 +74,7 @@ try:
     root = ElementTree(None, os.path.join('..', 'package.xml'))
     version = root.findtext('version')
     author_names = [a.text for a in root.findall('author')]
-    copyright = u'2017-%s, %s' % (time.strftime('%Y'), ', '.join(author_names))
+    copyright = u'2019-%s, %s' % (time.strftime('%Y'), ', '.join(author_names))
 except Exception as e:
     raise RuntimeError('Could not extract version and authors from package.xml:\n%s' % e)
 
@@ -235,7 +235,7 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-  'preamble': '\usepackage{ascmac}\usepackage{fancybox}\setcounter{chapter}{0}\setcounter{tocdepth}{3}',
+  'preamble': '\usepackage{ascmac}\usepackage{fancybox}\setcounter{chapter}{1}\setcounter{tocdepth}{4}',
 
 # Latex figure (float) alignment
 #'figure_align': 'htbp',
