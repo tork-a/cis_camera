@@ -64,7 +64,8 @@ CIS ToF Camera Sensor DCC-RGBD1
       -  Depth : Gray 16bit - 640 × 480
 
 -  Power source
--  DC 12V, 3A
+
+   -  DC 12V, 3A
 
 
 .. figure:: images/cis-tof-camera_dcc-rgbd1.jpg
