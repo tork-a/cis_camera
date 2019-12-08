@@ -202,13 +202,13 @@ option as below.
 .. figure:: images/cis_camera_pointcloud_rviz.png
    :alt: RViz PointCloud.launch
 
-   Fig. RViz PointCloud.launch
+   RViz PointCloud.launch
 
 .. figure:: images/cis_camera_dynamic_reconfigure.png
    :alt: Dynamic Reconfigure
    :width: 50%
    
-   Fig. Dynamic Reconfigure
+   Dynamic Reconfigure
 
 Launch Options and Default Values of pointcloud.launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -250,7 +250,7 @@ Launch Options and Default Values of pointcloud.launch
    :alt: RViz PointCloud.launch
    :width: 50%
 
-   Fig. PointCloud with RGB Color Projection
+   PointCloud with RGB Color Projection
 
 Point Cloud Library (PCL) Sample Program
 ------------------------------------------
@@ -275,7 +275,7 @@ publishes a TF on the centroid.
    :alt: PCL Example
    :width: 50%
 
-   Fig. PCL Example
+   PCL Example
 
 This example is based on "Building a Perception Pipleline" of ROS
 Industrial Training.
@@ -330,7 +330,7 @@ To set back the parameters to ``config/camera_ir.yaml`` data, uncheck
    :alt: ir_dist_redonfig
    :width: 50%
 
-   Fig. IR Distortion Reconfigure
+   IR Distortion Reconfigure
 
 Frame Rate
 ----------
