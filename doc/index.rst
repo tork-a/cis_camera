@@ -347,6 +347,51 @@ To find out what topics exits,
 
     $ rostopic list
 
+Trouble Shooting
+##################
+
+Errors at Launching
+=====================
+
+Errors about set_camera_info
+------------------------------
+
+You may get errors about `set_camera_info` as shown below every time you execute ``tof.launch`` or ``pointcloud.launch``.
+These errors are cause of mulutiple camera_info data and you can safely ignore them.
+
+::
+
+    [ERROR] [1575989725.084830797]: Tried to advertise a service that is already advertised in this node [/camera/set_camera_info]
+    [ERROR] [1575989725.084902986]: Tried to advertise a service that is already advertised in this node [/camera/set_camera_info]
+    [ERROR] [1575989725.084928007]: Tried to advertise a service that is already advertised in this node [/camera/set_camera_info]
+
+Device Permission Error 
+-------------------------
+
+When you get an error that says ``Permission denied opening /dev/bus/usb/.../...`` like shown below,
+it is a device permission error about your CIS ToF camera. 
+
+::
+
+    [ERROR] [1575991779.884027635]: Permission denied opening /dev/bus/usb/002/003
+    [ERROR] [1575991779.884053757]: Please quit by 'Ctrl-C' and change the permission with 'sudo chmod o+x /dev/bus/usb/002/003'
+
+1. Turn off your CIS camera
+2. Set udev rules for CIS ToF Camera with ``rrosrun cis_camera set_udev_rules``
+3. Turn on your CIS camera again
+
+Error for a Unconnected ToF Camera
+------------------------------------
+
+When your CIS ToF camera is not connected or not turned on, you get a error as shown below. 
+
+
+::
+
+    [ERROR] [1575989725.283170878]: uvc_find_device : Error Num = -4
+
+Please connect and turn on your camera.
+
 Reference
 ###########
 
