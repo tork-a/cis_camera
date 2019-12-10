@@ -1,10 +1,8 @@
-===========
- cis_camra
-===========
+cis_camera
+,,,,,,,,,,
 
-==========
  Overview
-==========
+##########
 
 This cis_camera package contains ROS driver nodes for CIS Corporation ToF Camera
 Sensor DCC-RGBD1 with USB 3.0 interface.
@@ -73,9 +71,8 @@ CIS ToF Camera Sensor DCC-RGBD1
    
    CIS ToF Camera : DCC-RGBD1
 
-===============
  Installations
-===============
+###############
 
 Install ROS
 =============
@@ -134,9 +131,8 @@ with entering sudo password in responce to program input.
 
 -  **NOTE** : This process is needed only once after the installations on your Ubuntu PC.
 
-==========================
  Launching CIS ToF Camera
-==========================
+##########################
 
 Connecting Camera
 ===================
@@ -350,9 +346,8 @@ To find out what topics exits,
 
     $ rostopic list
 
-===========
  Reference
-===========
+###########
 
 CIS TOF Camera ROS Driver Specific Topics
 ===========================================
@@ -416,8 +411,7 @@ CIS TOF Camera Specific Parameters
 Depth / IR Parameters
 -----------------------
 
-depth\_range
-~~~~~~~~~~~~~~
+*depth\_range*
 
 -  Depth Range
 
@@ -431,8 +425,7 @@ depth\_range
 
 -  Default : 0
 
-threshold
-~~~~~~~~~~~~~~
+*threshold*
 
 -  Coring Threshold
 
@@ -445,8 +438,7 @@ threshold
 
 -  Default : 0
 
-nr\_filter
-~~~~~~~~~~~~~~
+*nr\_filter*
 
 -  Noise Reduction Filter ON/OFF
 -  Value
@@ -456,8 +448,7 @@ nr\_filter
 
 -  Default : 1
 
-pulse\_count
-~~~~~~~~~~~~~~
+*pulse\_count*
 
 -  Number of light emitting pulses per frame
 
@@ -470,8 +461,7 @@ pulse\_count
 
 -  Default : 2000
 
-ld\_enable
-~~~~~~~~~~~~~~
+*ld\_enable*
 
 -  Enable LEDs
 
@@ -485,8 +475,7 @@ ld\_enable
 
 -  Default : 3
 
-ir\_gain
-~~~~~~~~~~~~~~
+*ir\_gain*
 
 -  IR Gain
 -  Value
@@ -496,8 +485,7 @@ ir\_gain
 
 -  Default : 256
 
-ae\_mode
-~~~~~~~~~~~~~~
+*ae\_mode*
 
 -  Auto exposure mode
 -  Value
@@ -512,8 +500,7 @@ ae\_mode
 RGB Camera Prameters
 ----------------------
 
-color\_correction
-~~~~~~~~~~~~~~~~~~~
+*color\_correction*
 
 -  Color correction Mode
 -  Value
@@ -523,8 +510,7 @@ color\_correction
 
 -  Default : 0
 
-brightness\_gain
-~~~~~~~~~~~~~~~~~~~
+*brightness\_gain*
 
 -  RGB brightness gain
 -  Value
@@ -534,8 +520,7 @@ brightness\_gain
 
 -  Default : 1.0
 
-exposure\_time
-~~~~~~~~~~~~~~~~~~~
+*exposure\_time*
 
 -  RGB exposure time (shutter control)
 -  Value
@@ -573,8 +558,7 @@ Launch Files
 tof.launch
 ----------
 
-Nodes
-~~~~~~~~~~
+*Nodes*
 
 ::
 
@@ -587,8 +571,7 @@ Nodes
     /rosout
 
 
-Topics
-~~~~~~~~~~
+*Topics*
 
 ::
 
@@ -645,8 +628,7 @@ Topics
     /rosout_agg
     /tf
 
-Parameters
-~~~~~~~~~~
+*Parameters*
 
 ::
 
@@ -750,8 +732,7 @@ Parameters
 pointcloud.launch
 -----------------
 
-Nodes
-~~~~~~~~~~
+*Nodes*
 
 ::
 
@@ -775,8 +756,7 @@ Nodes
     /rqt_reconfigure
     /rviz
 
-Topics
-~~~~~~~~~~
+*Topics*
 
 ::
 
@@ -929,8 +909,7 @@ Topics
     /tf
     /tf_static
 
-Parameters
-~~~~~~~~~~
+*Parameters*
 
 ::
 
