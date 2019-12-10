@@ -1,7 +1,7 @@
 cis_camera
-,,,,,,,,,,
+##########
 
- Overview
+Overview
 ##########
 
 This cis_camera package contains ROS driver nodes for CIS Corporation ToF Camera
@@ -69,9 +69,10 @@ CIS ToF Camera Sensor DCC-RGBD1
    :alt: CIS ToF Camera
    :width: 50%
    
-   CIS ToF Camera : DCC-RGBD1
+   CIS ToF Camera - DCC-RGBD1
 
- Installations
+
+Installations
 ###############
 
 Install ROS
@@ -131,7 +132,7 @@ with entering sudo password in responce to program input.
 
 -  **NOTE** : This process is needed only once after the installations on your Ubuntu PC.
 
- Launching CIS ToF Camera
+Launching CIS ToF Camera
 ##########################
 
 Connecting Camera
@@ -346,7 +347,7 @@ To find out what topics exits,
 
     $ rostopic list
 
- Reference
+Reference
 ###########
 
 CIS TOF Camera ROS Driver Specific Topics
