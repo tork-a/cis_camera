@@ -4,9 +4,12 @@
   <version>0.0.3</version>
   <description>The cis_camera package</description>
   
-  <maintainer email="yamamoto.yosuke@opensource-robotics.tokyo.jp">Yosuke Yamamoto</maintainer>
+  <maintainer email="dev@opensource-robotics.tokyo.jp">Tokyo Opensource Robotics Kyokai (TORK) Development Team</maintainer>
+  <author email="yamamoto.yosuke@opensource-robotics.tokyo.jp">Yosuke Yamamoto</author>
   
   <license>BSD</license>
+  
+  <url type="website">http://wiki.ros.org/cis_camera</url>
   
   <buildtool_depend>catkin</buildtool_depend>
   
@@ -23,6 +26,7 @@
   <build_depend>pcl_ros</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>tf_conversions</build_depend>
+  <build_depend>roslint</build_depend>
   
   <build_export_depend>roscpp</build_export_depend>
   
@@ -48,6 +52,7 @@
   
   <export>
     <nodelet plugin="${prefix}/cis_camera_nodelet.xml" />
+    <rosdoc config="rosdoc.yaml" />
   </export>
   
 </package>

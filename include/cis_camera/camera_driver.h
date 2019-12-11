@@ -88,6 +88,11 @@
 namespace cis_camera
 {
 
+/**
+ * @brief The CameraDriver class is a ROS device driver of CIS ToF Camera Sensor.
+ * The CameraDriver class gets/sets configurations of the ToF camera sensor, 
+ * aquires RGB, IR and Depth Images from the camera sensor and publishes these images.
+ */
 class CameraDriver
 {
 public:
