@@ -2,8 +2,8 @@
 Changelog for package cis_camera
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.4 (2019-12-11)
+------------------
 * Merge pull request `#25 <https://github.com/tork-a/cis_camera/issues/25>`_ from tork-a/add-comments
   Add document and comments for document
 * add 'Trouble Shooting' in index.rst
