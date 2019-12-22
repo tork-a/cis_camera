@@ -131,6 +131,7 @@ private:
   void ReconfigureCallback( CISCameraConfig &config, uint32_t level );
   
   // Accept a new image frame from the camera
+  void filterDepthImage( sensor_msgs::ImagePtr& msg );
   void ImageCallback( uvc_frame_t *frame );
   static void ImageCallbackAdapter( uvc_frame_t *frame, void *ptr );
   
