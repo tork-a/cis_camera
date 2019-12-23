@@ -327,8 +327,14 @@ void CameraDriver::filterDepthImage( sensor_msgs::ImagePtr& msg )
   
   // Median Blur Filter
   int median_blur_size = 3;
-  cv::Mat mdb_img;
-  cv::medianBlur( src_img, mdb_img, median_blur_size );
+  cv::Mat blr_img;
+  
+  int blur_mode = 0;
+  priv_nh_.getParam( "blur_mode", blur_mode );
+  if ( blur_mode == 1 )
+    cv::medianBlur( src_img, blr_img, median_blur_size );
+  else
+    cv::GaussianBlur( src_img, blr_img, cv::Size(3, 3), 0, 0, cv::BORDER_DEFAULT);
   
   // Edge Extraction
   int edge_threshold    = 128;
@@ -340,13 +346,13 @@ void CameraDriver::filterDepthImage( sensor_msgs::ImagePtr& msg )
   priv_nh_.getParam( "edge_mode", edge_mode );
   if ( edge_mode == 1 )
   {
-    cv::Laplacian( mdb_img, edg_img, CV_32F, 3 );
+    cv::Laplacian( blr_img, edg_img, CV_32F, 3 );
   }
   else
   {
     cv::Mat sbx_img, sby_img;
-    cv::Sobel( mdb_img, sbx_img, CV_32F, 1, 0 );
-    cv::Sobel( mdb_img, sby_img, CV_32F, 0, 1 );
+    cv::Sobel( blr_img, sbx_img, CV_32F, 1, 0 );
+    cv::Sobel( blr_img, sby_img, CV_32F, 0, 1 );
     edg_img = ( cv::abs( sbx_img ) + cv::abs( sby_img ) ) / 2.0;
   }
   
