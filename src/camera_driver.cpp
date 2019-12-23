@@ -331,12 +331,25 @@ void CameraDriver::filterDepthImage( sensor_msgs::ImagePtr& msg )
   cv::medianBlur( src_img, mdb_img, median_blur_size );
   
   // Edge Extraction
-  int edge_threshold    = 1;
+  int edge_threshold    = 128;
   int dilate_iterations = 2;
-  priv_nh_.getParam( "edge_threshold"   , edge_threshold    );
   priv_nh_.getParam( "dilate_iterations", dilate_iterations );
   cv::Mat edg_img;
-  cv::Laplacian( mdb_img, edg_img, CV_32F, 3 );
+  
+  int edge_mode = 0;
+  priv_nh_.getParam( "edge_mode", edge_mode );
+  if ( edge_mode == 1 )
+  {
+    cv::Laplacian( mdb_img, edg_img, CV_32F, 3 );
+  }
+  else
+  {
+    cv::Mat sbx_img, sby_img;
+    cv::Sobel( mdb_img, sbx_img, CV_32F, 1, 0 );
+    cv::Sobel( mdb_img, sby_img, CV_32F, 0, 1 );
+    edg_img = ( cv::abs( sbx_img ) + cv::abs( sby_img ) ) / 2.0;
+  }
+  
   cv::convertScaleAbs( edg_img, edg_img, 1, 0 );
   cv::threshold( edg_img, edg_img, edge_threshold, 255, cv::THRESH_BINARY|cv::THRESH_OTSU );
   cv::dilate( edg_img, edg_img, cv::Mat(), cv::Point(-1,-1), dilate_iterations );
