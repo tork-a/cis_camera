@@ -361,14 +361,13 @@ void CameraDriver::filterDepthImage( sensor_msgs::ImagePtr& msg )
   cv::dilate( edg_img, edg_img, cv::Mat(), cv::Point(-1,-1), dilate_iterations );
   
   // Set Depth Data as NaN on the Edges
-  float nan = std::numeric_limits<float>::quiet_NaN();
   for ( int i = 0; i < edg_img.rows; i++ )
   {
     for ( int j = 0; j < edg_img.cols; j++ )
     {
       if ( 0 < edg_img.at<uint8_t>(i,j) )
       {
-        src_img.at<uint16_t>(i,j) = nan;
+        src_img.at<uint16_t>(i,j) = 0;
       }
     }
   }
