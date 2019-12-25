@@ -82,6 +82,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <libuvc/libuvc.h>
 #include <math.h>
+#include <cv_bridge/cv_bridge.h>
 
 namespace cis_camera
 {
@@ -305,6 +306,77 @@ void CameraDriver::ReconfigureCallback( CISCameraConfig &new_config, uint32_t le
 
 
 /**
+ * @brief filterDepthImage effects filters on a image message with OpenCV
+ * @param msg sensor_msgs::ImagePtr& image message pointer to be filtered
+ */
+void CameraDriver::filterDepthImage( sensor_msgs::ImagePtr& msg )
+{
+  cv_bridge::CvImagePtr cv_ptr;
+  
+  try
+  {
+    cv_ptr = cv_bridge::toCvCopy( msg, "16UC1" );
+  }
+  catch ( cv_bridge::Exception& e )
+  {
+    ROS_ERROR( "cv_bridge exception: %s", e.what() );
+    return;
+  }
+  
+  cv::Mat &src_img = cv_ptr->image;
+  
+  // Median Blur Filter
+  int median_blur_size = 3;
+  cv::Mat blr_img;
+  
+  int blur_mode = 0;
+  priv_nh_.getParam( "blur_mode", blur_mode );
+  if ( blur_mode == 1 )
+    cv::medianBlur( src_img, blr_img, median_blur_size );
+  else
+    cv::GaussianBlur( src_img, blr_img, cv::Size(3, 3), 0, 0, cv::BORDER_DEFAULT);
+  
+  // Edge Extraction
+  int edge_threshold    = 128;
+  int dilate_iterations = 2;
+  priv_nh_.getParam( "dilate_iterations", dilate_iterations );
+  cv::Mat edg_img;
+  
+  int edge_mode = 0;
+  priv_nh_.getParam( "edge_mode", edge_mode );
+  if ( edge_mode == 1 )
+  {
+    cv::Laplacian( blr_img, edg_img, CV_32F, 3 );
+  }
+  else
+  {
+    cv::Mat sbx_img, sby_img;
+    cv::Sobel( blr_img, sbx_img, CV_32F, 1, 0 );
+    cv::Sobel( blr_img, sby_img, CV_32F, 0, 1 );
+    edg_img = ( cv::abs( sbx_img ) + cv::abs( sby_img ) ) / 2.0;
+  }
+  
+  cv::convertScaleAbs( edg_img, edg_img, 1, 0 );
+  cv::threshold( edg_img, edg_img, edge_threshold, 255, cv::THRESH_BINARY|cv::THRESH_OTSU );
+  cv::dilate( edg_img, edg_img, cv::Mat(), cv::Point(-1,-1), dilate_iterations );
+  
+  // Set Depth Data as NaN on the Edges
+  for ( int i = 0; i < edg_img.rows; i++ )
+  {
+    for ( int j = 0; j < edg_img.cols; j++ )
+    {
+      if ( 0 < edg_img.at<uint8_t>(i,j) )
+      {
+        src_img.at<uint16_t>(i,j) = 0;
+      }
+    }
+  }
+  
+  msg = cv_ptr->toImageMsg();
+}
+
+
+/**
  * @brief cvtDoubleToByte converts double type value to 0-255 limited integer.
  * @param x double value to convert
  * @return uint8_t of the limited integer
@@ -316,6 +388,7 @@ uint8_t cvtDoubleToByte( double x )
   
   return static_cast<uint8_t>( x );
 }
+
 
 /**
  * @brief ImageCallback is a method to process a camera image.
@@ -639,6 +712,12 @@ void CameraDriver::ImageCallback( uvc_frame_t *frame )
   
   cinfo_color->header.frame_id = frame_id_color;
   cinfo_color->header.stamp    = timestamp;
+  
+  // Depth Image Filter
+  bool depth_filter;
+  err = priv_nh_.getParam( "depth_filter", depth_filter );
+  if ( depth_filter )
+    filterDepthImage( image_depth );
   
   pub_camera_.publish( image, cinfo );
   pub_ir_.publish( image_ir, cinfo_ir );

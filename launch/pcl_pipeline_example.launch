@@ -1,0 +1,87 @@
+<launch>
+  
+  <arg name="manager_name" value="pcl_pipeline_nodelet_manager"/>
+  
+  <node pkg="nodelet" type="nodelet" name="$(arg manager_name)"
+        args="manager" output="screen" />
+  
+  <node pkg="nodelet" type="nodelet" name="voxel_grid"
+        args="load pcl/VoxelGrid $(arg manager_name)" >
+    <remap from="~input" to="/camera/depth/points" />
+    <rosparam>
+      filter_field_name: z
+      filter_limit_min: 0.1
+      filter_limit_max: 6.0
+      filter_limit_negative: false
+      leaf_size: 0.01
+    </rosparam>
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="crop_box"
+        args="load pcl/CropBox $(arg manager_name)" >
+    <remap from="~input"   to="/voxel_grid/output" />
+    <rosparam>
+      min_x: -0.2
+      max_x:  0.2
+      min_y: -0.3
+      max_y:  0.3
+      min_z:  0.15
+      max_z:  1.0
+    </rosparam>
+  </node>
+  
+  <node pkg="nodelet" type="nodelet" name="planar_segmentation"
+        args="load pcl/SACSegmentation $(arg manager_name)" >
+    <remap from="~input"   to="/crop_box/output" />
+    <rosparam>
+      # -[ Mandatory parameters
+      # model_type:
+      # 0:  SACMODEL_PLANE
+      # 1:  SACMODEL_LINE
+      # 2:  SACMODEL_CIRCLE2D
+      # 3:  SACMODEL_CIRCLE3D
+      # 4:  SACMODEL_SPHERE
+      # 5:  SACMODEL_CYLINDER
+      # 6:  SACMODEL_CONE
+      # 7:  SACMODEL_TORUS
+      # 8:  SACMODEL_PARALLEL_LINE
+      # 9:  SACMODEL_PERPENDICULAR_PLANE
+      # 10: SACMODEL_PARALLEL_LINES
+      # 11: SACMODEL_NORMAL_PLANE
+      # 12: SACMODEL_NORMAL_SPHERE
+      # 13: SACMODEL_REGISTRATION
+      # 14: SACMODEL_REGISTRATION_2D
+      # 15: SACMODEL_PARALLEL_PLANE
+      # 16: SACMODEL_NORMAL_PARALLEL_PLANE
+      # 17: SACMODEL_STICK
+      model_type: 0
+      method_type: 0
+      distance_threshold: 0.01
+      max_iterations: 200
+      optimize_coefficients: true
+    </rosparam>
+  </node>
+  
+  <node pkg="nodelet" type="nodelet" name="extract_indices"
+        args="load pcl/ExtractIndices $(arg manager_name)" >
+    <remap from="~input"   to="/crop_box/output" />
+    <remap from="~indices" to="/planar_segmentation/inliers" />
+    <rosparam>
+      negative: true
+      approximate_sync: true
+    </rosparam>
+  </node>
+  
+  <node pkg="nodelet" type="nodelet" name="euclidian_cluster"
+        args="load pcl/EuclideanClusterExtraction $(arg manager_name)" >
+    <remap from="~input"   to="/extract_indices/output" />
+    <rosparam>
+      cluster_tolerance: 0.01
+      cluster_min_size: 100
+      cluster_max_size: 10000
+      spatial_locator: 0
+    </rosparam>
+  </node>
+  
+  
+</launch>
