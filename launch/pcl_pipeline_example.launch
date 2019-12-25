@@ -68,6 +68,7 @@
     <remap from="~indices" to="/planar_segmentation/inliers" />
     <rosparam>
       negative: true
+      approximate_sync: true
     </rosparam>
   </node>
   
