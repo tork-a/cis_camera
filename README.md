@@ -1,4 +1,4 @@
-# cis_camera [![Build Status](https://travis-ci.com/tork-a/cis_camera.svg?branch=master)](https://travis-ci.org/tork-a/cis_camera)
+# cis_camera [![Build Status](https://travis-ci.com/tork-a/cis_camera.svg?branch=master)](https://travis-ci.com/tork-a/cis_camera)
 
 This package contains ROS driver nodes for CIS Corporation ToF Camera Sensor DCC-RGBD1 with USB 3.0 interface.
 
