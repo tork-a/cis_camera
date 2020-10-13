@@ -76,7 +76,7 @@ install(FILES cis_camera_nodelet.xml
   )
 
 ## Mark executables and/or libraries for installation
-install(DIRECTORY config launch test
+install(DIRECTORY config launch test script debian
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   USE_SOURCE_PERMISSIONS
   )
